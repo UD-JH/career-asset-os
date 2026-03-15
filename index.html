@@ -3,170 +3,177 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="업무를 자산과 커리어 언어로 바꾸는 개인 OS" />
   <title>Career Asset OS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Sans+KR:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+
+  <!-- Auth Gate -->
   <div id="authGate" class="auth-gate">
     <div class="auth-card">
-      <div class="auth-badge">Private Access</div>
-      <h1>Career Asset OS</h1>
-      <p class="muted auth-copy">비밀번호를 입력해야 진입할 수 있어. 이 비밀번호 게이트는 GitHub Pages용 가벼운 접근 제한용이야.</p>
+      <div class="auth-eyebrow">Private Access</div>
+      <h1 class="auth-title">Career<br>Asset OS</h1>
+      <p class="auth-desc">업무를 자산과 커리어 언어로 바꾸는 개인 OS.<br>비밀번호를 입력해 진입하세요.</p>
       <form id="authForm" class="auth-form">
-        <input id="passwordInput" type="password" placeholder="비밀번호 입력" autocomplete="current-password" required />
-        <button type="submit" class="primary">입장하기</button>
+        <input id="passwordInput" type="password" placeholder="비밀번호" autocomplete="current-password" required />
+        <button type="submit" class="btn btn-primary">입장하기</button>
       </form>
-      <div id="authError" class="auth-error hidden">비밀번호가 올바르지 않습니다.</div>
-      <div class="muted auth-help">비밀번호는 <code>app.js</code> 상단의 <code>SITE_PASSWORD</code> 값을 수정해서 바꿀 수 있어.</div>
+      <div id="authError" class="auth-error" hidden>비밀번호가 올바르지 않습니다.</div>
     </div>
+    <div class="auth-footer">비밀번호는 <code>app.js</code>의 <code>SITE_PASSWORD</code> 값으로 변경</div>
   </div>
 
+  <!-- App Shell -->
   <div class="app" id="appRoot">
-    <aside class="sidebar">
-      <h1>Career Asset OS</h1>
-      <p class="muted">업무를 자산과 커리어 언어로 바꾸는 개인 OS</p>
-
-      <div class="sidebar-block">
-        <button id="logoutBtn" class="secondary">잠금 / 로그아웃</button>
-        <button id="seedBtn" class="secondary">데모 데이터 넣기</button>
-        <button id="exportBtn" class="secondary">JSON 내보내기</button>
-        <button id="mdExportBtn" class="secondary">Markdown 내보내기</button>
-        <label class="file-label">
-          JSON 불러오기
-          <input id="importInput" type="file" accept="application/json" />
-        </label>
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="logo">Career Asset <span class="logo-accent">OS</span></h1>
       </div>
-
-      <div class="sidebar-block">
-        <h3>클라우드 동기화</h3>
-        <div class="muted small-copy">Supabase 로그인 후 같은 데이터를 여러 기기에서 쓸 수 있어.</div>
-        <input id="syncEmail" type="email" placeholder="이메일 입력" />
-        <button id="sendMagicLinkBtn" class="secondary">매직 링크 보내기</button>
-        <button id="syncDownBtn" class="secondary">클라우드에서 불러오기</button>
-        <button id="syncUpBtn" class="secondary">현재 데이터 클라우드에 올리기</button>
-        <button id="cloudSignOutBtn" class="ghost">클라우드 로그아웃</button>
-        <div id="cloudStatus" class="sync-status muted">localStorage 모드</div>
+      <nav class="tab-nav" id="tabNav">
+        <button class="tab-btn active" data-tab="dashboard">대시보드</button>
+        <button class="tab-btn" data-tab="record">기록하기</button>
+        <button class="tab-btn" data-tab="works">업무 목록</button>
+        <button class="tab-btn" data-tab="detail">상세 보기</button>
+        <button class="tab-btn" data-tab="settings">설정</button>
+      </nav>
+      <div class="topbar-right">
+        <div id="cloudBadge" class="cloud-badge">localStorage</div>
+        <button id="logoutBtn" class="btn btn-ghost btn-sm">잠금</button>
       </div>
+    </header>
 
-      <div class="sidebar-block">
-        <h3>필터</h3>
-        <input id="searchInput" placeholder="검색" />
-        <select id="projectFilter">
-          <option value="">모든 프로젝트</option>
-        </select>
-        <select id="skillFilter">
-          <option value="">모든 역량</option>
-        </select>
-      </div>
-
-      <div class="sidebar-block small-note">
-        <div class="muted">추천 사용 흐름</div>
-        <ol>
-          <li>업무 빠르게 기록</li>
-          <li>상세에서 구조화</li>
-          <li>클라우드 동기화</li>
-          <li>월간 요약/Markdown 출력</li>
-        </ol>
-      </div>
-    </aside>
-
-    <main class="main">
-      <section class="panel stats">
-        <div class="stat-card"><span>총 업무</span><strong id="totalWorks">0</strong></div>
-        <div class="stat-card"><span>자산 수</span><strong id="totalAssets">0</strong></div>
-        <div class="stat-card"><span>최근 핵심 역량</span><strong id="topSkill">-</strong></div>
-        <div class="stat-card"><span>이번 달 업무</span><strong id="monthlyWorkCount">0</strong></div>
-      </section>
-
-      <section class="panel form-panel">
-        <div class="section-head form-head">
-          <div>
-            <h2 id="formTitle">새 업무 기록</h2>
-            <div id="formModeHint" class="muted">빠르게 기록하고, 필요하면 나중에 더 구조화하면 돼.</div>
-          </div>
-          <button id="cancelEditBtn" type="button" class="ghost hidden">수정 취소</button>
+    <!-- Tab: Dashboard -->
+    <main class="tab-content active" data-tab="dashboard">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">Dashboard</h2>
+          <p class="page-desc">기록이 쌓이면 커리어가 보입니다.</p>
         </div>
-        <form id="workForm" class="grid-form">
-          <input name="title" placeholder="업무 제목" required />
-          <input name="date" type="date" required />
-          <input name="project" placeholder="프로젝트" />
-          <input name="category" placeholder="업무 유형 (예: 분석, 운영, 기획)" />
-          <input name="summary" placeholder="한 줄 설명" />
-          <input name="role" placeholder="내 역할" />
-          <input name="tools" placeholder="사용 도구" />
-          <input name="link" placeholder="결과물 링크" />
-          <textarea name="problem" placeholder="문제 / 과제"></textarea>
-          <textarea name="action" placeholder="내가 한 행동"></textarea>
-          <textarea name="result" placeholder="결과 / 성과"></textarea>
-          <textarea name="lesson" placeholder="배운 점"></textarea>
-          <input name="skills" placeholder="역량 태그 (쉼표로 구분)" />
-          <div class="asset-row">
-            <input name="assetName" placeholder="남긴 자산 이름 (선택)" />
-            <select name="assetType">
-              <option value="">자산 유형</option>
-              <option value="template">template</option>
-              <option value="checklist">checklist</option>
-              <option value="document">document</option>
-              <option value="script">script</option>
-              <option value="framework">framework</option>
-              <option value="prompt">prompt</option>
-            </select>
-          </div>
-          <div class="form-actions">
-            <button type="submit" class="primary" id="submitBtn">저장하기</button>
-          </div>
-        </form>
-      </section>
-
-      <div class="two-col">
-        <section class="panel skill-panel">
-          <div class="section-head">
-            <div>
-              <h2>Skill Map</h2>
-              <div class="muted" id="skillSummary">역량 데이터가 아직 없습니다.</div>
-            </div>
-          </div>
+      </div>
+      <div class="stat-strip">
+        <div class="stat-item"><span class="stat-label">총 업무</span><strong class="stat-value" id="totalWorks">0</strong></div>
+        <div class="stat-item"><span class="stat-label">자산 수</span><strong class="stat-value" id="totalAssets">0</strong></div>
+        <div class="stat-item"><span class="stat-label">핵심 역량</span><strong class="stat-value stat-value-text" id="topSkill">-</strong></div>
+        <div class="stat-item"><span class="stat-label">이번 달</span><strong class="stat-value" id="monthlyWorkCount">0</strong></div>
+      </div>
+      <div class="dash-grid">
+        <section class="card card-skills">
+          <div class="card-head"><h3>Skill Map</h3><span class="card-sub" id="skillSummary">역량 데이터가 아직 없습니다.</span></div>
           <div id="skillMap" class="skill-map"></div>
         </section>
-
-        <section class="panel monthly-panel">
-          <div class="section-head">
-            <div>
-              <h2>월간 요약</h2>
-              <div class="muted">선택한 월 기준으로 업무/자산/역량을 요약해줘.</div>
-            </div>
-            <input id="monthPicker" type="month" />
-          </div>
+        <section class="card card-monthly">
+          <div class="card-head"><h3>월간 요약</h3><input id="monthPicker" type="month" class="input-inline" /></div>
           <div id="monthlySummary" class="summary-block"></div>
         </section>
-      </div>
-
-      <div class="two-col">
-        <section class="panel list-panel">
-          <div class="section-head">
-            <h2>업무 목록</h2>
-            <div class="muted" id="listSummary">전체 업무</div>
-          </div>
-          <div id="workList" class="work-list"></div>
-        </section>
-
-        <section class="panel assets-panel">
-          <div class="section-head">
-            <div>
-              <h2>Asset Library</h2>
-              <div class="muted" id="assetSummary">자산을 쌓아두는 공간</div>
-            </div>
-          </div>
+        <section class="card card-assets">
+          <div class="card-head"><h3>Asset Library</h3><span class="card-sub" id="assetSummary">자산을 쌓아두는 공간</span></div>
           <div id="assetLibrary" class="asset-library"></div>
         </section>
       </div>
+    </main>
 
-      <section class="panel detail-panel">
-        <h2>상세 보기 / 커리어 변환</h2>
-        <div id="detailEmpty" class="muted">업무를 선택하면 상세 내용과 커리어 문장이 표시됩니다.</div>
-        <div id="detailView" class="detail-view-hidden"></div>
-      </section>
+    <!-- Tab: Record -->
+    <main class="tab-content" data-tab="record">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title" id="formTitle">새 업무 기록</h2>
+          <p class="page-desc" id="formModeHint">빠르게 기록하고, 필요하면 나중에 더 구조화하면 돼.</p>
+        </div>
+        <button id="cancelEditBtn" class="btn btn-ghost hidden">수정 취소</button>
+      </div>
+      <form id="workForm" class="record-form">
+        <div class="form-row">
+          <div class="form-group"><label>업무 제목</label><input name="title" placeholder="예: 주간 리포트 구조 개선" required /></div>
+          <div class="form-group"><label>날짜</label><input name="date" type="date" required /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>프로젝트</label><input name="project" placeholder="소속 프로젝트" /></div>
+          <div class="form-group"><label>업무 유형</label><input name="category" placeholder="예: 분석, 운영, 기획" /></div>
+        </div>
+        <div class="form-group"><label>한 줄 설명</label><input name="summary" placeholder="이 업무를 한 문장으로" /></div>
+        <div class="form-row">
+          <div class="form-group"><label>내 역할</label><input name="role" placeholder="기획, 실행, 리드 등" /></div>
+          <div class="form-group"><label>사용 도구</label><input name="tools" placeholder="Google Sheets, Python 등" /></div>
+        </div>
+        <div class="form-group"><label>결과물 링크</label><input name="link" placeholder="https://..." /></div>
+        <div class="form-divider"><span>구조화 (PAR)</span></div>
+        <div class="form-group"><label>문제 / 과제</label><textarea name="problem" placeholder="어떤 문제 상황이었는지"></textarea></div>
+        <div class="form-group"><label>내가 한 행동</label><textarea name="action" placeholder="어떤 판단을 내리고 무엇을 실행했는지"></textarea></div>
+        <div class="form-group"><label>결과 / 성과</label><textarea name="result" placeholder="어떤 변화가 생겼는지"></textarea></div>
+        <div class="form-group"><label>배운 점</label><textarea name="lesson" placeholder="이 경험에서 얻은 인사이트"></textarea></div>
+        <div class="form-divider"><span>메타 정보</span></div>
+        <div class="form-group"><label>역량 태그</label><input name="skills" placeholder="쉼표로 구분 — 예: 리포팅, 구조 설계, 문서화" /></div>
+        <div class="form-row">
+          <div class="form-group"><label>자산 이름 (선택)</label><input name="assetName" placeholder="이 업무로 남긴 자산" /></div>
+          <div class="form-group"><label>자산 유형</label>
+            <select name="assetType"><option value="">선택</option><option value="template">template</option><option value="checklist">checklist</option><option value="document">document</option><option value="script">script</option><option value="framework">framework</option><option value="prompt">prompt</option></select>
+          </div>
+        </div>
+        <div class="form-footer"><button type="submit" class="btn btn-primary" id="submitBtn">저장하기</button></div>
+      </form>
+    </main>
+
+    <!-- Tab: Works -->
+    <main class="tab-content" data-tab="works">
+      <div class="page-header">
+        <div><h2 class="page-title">업무 목록</h2><p class="page-desc" id="listSummary">전체 업무</p></div>
+      </div>
+      <div class="filter-bar">
+        <input id="searchInput" placeholder="검색..." class="filter-input" />
+        <select id="projectFilter" class="filter-select"><option value="">모든 프로젝트</option></select>
+        <select id="skillFilter" class="filter-select"><option value="">모든 역량</option></select>
+      </div>
+      <div id="workList" class="work-list"></div>
+    </main>
+
+    <!-- Tab: Detail -->
+    <main class="tab-content" data-tab="detail">
+      <div class="page-header">
+        <div><h2 class="page-title">상세 보기</h2><p class="page-desc">업무의 구조와 커리어 변환 문장을 확인합니다.</p></div>
+      </div>
+      <div id="detailEmpty" class="empty-state">업무 목록에서 항목을 선택하면 여기에 표시됩니다.</div>
+      <div id="detailView"></div>
+    </main>
+
+    <!-- Tab: Settings -->
+    <main class="tab-content" data-tab="settings">
+      <div class="page-header">
+        <div><h2 class="page-title">설정</h2><p class="page-desc">데이터 관리와 클라우드 동기화</p></div>
+      </div>
+      <div class="settings-grid">
+        <section class="card">
+          <div class="card-head"><h3>데이터 관리</h3></div>
+          <div class="settings-actions">
+            <button id="seedBtn" class="btn btn-outline">데모 데이터 넣기</button>
+            <button id="exportBtn" class="btn btn-outline">JSON 내보내기</button>
+            <button id="mdExportBtn" class="btn btn-outline">Markdown 내보내기</button>
+            <label class="btn btn-outline file-label-btn">JSON 불러오기<input id="importInput" type="file" accept="application/json" /></label>
+          </div>
+        </section>
+        <section class="card">
+          <div class="card-head"><h3>클라우드 동기화</h3><span class="card-sub">Supabase 매직 링크 로그인</span></div>
+          <div class="settings-actions">
+            <input id="syncEmail" type="email" placeholder="이메일 입력" />
+            <button id="sendMagicLinkBtn" class="btn btn-outline">매직 링크 보내기</button>
+            <button id="syncDownBtn" class="btn btn-outline">클라우드에서 불러오기</button>
+            <button id="syncUpBtn" class="btn btn-outline">클라우드에 올리기</button>
+            <button id="cloudSignOutBtn" class="btn btn-ghost">클라우드 로그아웃</button>
+          </div>
+          <div id="cloudStatus" class="cloud-status">localStorage 모드</div>
+        </section>
+        <section class="card">
+          <div class="card-head"><h3>사용 흐름</h3></div>
+          <div class="flow-steps">
+            <div class="flow-step"><span class="flow-num">01</span><span>업무 빠르게 기록</span></div>
+            <div class="flow-step"><span class="flow-num">02</span><span>상세에서 구조화</span></div>
+            <div class="flow-step"><span class="flow-num">03</span><span>클라우드 동기화</span></div>
+            <div class="flow-step"><span class="flow-num">04</span><span>월간 요약 / Markdown 출력</span></div>
+          </div>
+        </section>
+      </div>
     </main>
   </div>
 
