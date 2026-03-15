@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="업무를 자산과 커리어 언어로 바꾸는 개인 OS" />
   <title>Career Asset OS</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -21,7 +22,7 @@
     </div>
   </div>
 
-  <div class="app hidden" id="appRoot">
+  <div class="app" id="appRoot">
     <aside class="sidebar">
       <h1>Career Asset OS</h1>
       <p class="muted">업무를 자산과 커리어 언어로 바꾸는 개인 OS</p>
@@ -164,12 +165,12 @@
       <section class="panel detail-panel">
         <h2>상세 보기 / 커리어 변환</h2>
         <div id="detailEmpty" class="muted">업무를 선택하면 상세 내용과 커리어 문장이 표시됩니다.</div>
-        <div id="detailView" class="hidden"></div>
+        <div id="detailView" class="detail-view-hidden"></div>
       </section>
     </main>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="app.js" defer></script>
 </body>
 </html>

@@ -1,3 +1,5 @@
+/* ─── Career Asset OS v5.1 ─── */
+
 const STORAGE_KEY = 'career-asset-os-data-v5';
 const AUTH_KEY = 'career-asset-os-auth-v1';
 const SITE_PASSWORD = 'jiheon0409';
@@ -6,69 +8,43 @@ const SITE_PASSWORD = 'jiheon0409';
 const SUPABASE_URL = 'https://qhndtmybuyopztxqswqc.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_whlWNk_L6g_lnABT9UNOkw_GW31-I3E';
 
+/* ─── State ─── */
 const state = {
   works: [],
   selectedId: null,
   editingId: null,
-  cloud: {
-    enabled: false,
-    client: null,
-    user: null,
-  },
+  cloud: { enabled: false, client: null, user: null },
 };
 
-const el = {
-  authGate: document.getElementById('authGate'),
-  appRoot: document.getElementById('appRoot'),
-  authForm: document.getElementById('authForm'),
-  passwordInput: document.getElementById('passwordInput'),
-  authError: document.getElementById('authError'),
-  logoutBtn: document.getElementById('logoutBtn'),
-  form: document.getElementById('workForm'),
-  workList: document.getElementById('workList'),
-  detailView: document.getElementById('detailView'),
-  detailEmpty: document.getElementById('detailEmpty'),
-  totalWorks: document.getElementById('totalWorks'),
-  totalAssets: document.getElementById('totalAssets'),
-  topSkill: document.getElementById('topSkill'),
-  monthlyWorkCount: document.getElementById('monthlyWorkCount'),
-  exportBtn: document.getElementById('exportBtn'),
-  mdExportBtn: document.getElementById('mdExportBtn'),
-  importInput: document.getElementById('importInput'),
-  searchInput: document.getElementById('searchInput'),
-  projectFilter: document.getElementById('projectFilter'),
-  skillFilter: document.getElementById('skillFilter'),
-  listSummary: document.getElementById('listSummary'),
-  seedBtn: document.getElementById('seedBtn'),
-  formTitle: document.getElementById('formTitle'),
-  formModeHint: document.getElementById('formModeHint'),
-  cancelEditBtn: document.getElementById('cancelEditBtn'),
-  submitBtn: document.getElementById('submitBtn'),
-  skillMap: document.getElementById('skillMap'),
-  skillSummary: document.getElementById('skillSummary'),
-  assetLibrary: document.getElementById('assetLibrary'),
-  assetSummary: document.getElementById('assetSummary'),
-  monthPicker: document.getElementById('monthPicker'),
-  monthlySummary: document.getElementById('monthlySummary'),
-  syncEmail: document.getElementById('syncEmail'),
-  sendMagicLinkBtn: document.getElementById('sendMagicLinkBtn'),
-  syncDownBtn: document.getElementById('syncDownBtn'),
-  syncUpBtn: document.getElementById('syncUpBtn'),
-  cloudSignOutBtn: document.getElementById('cloudSignOutBtn'),
-  cloudStatus: document.getElementById('cloudStatus'),
-};
+/* ─── DOM References ─── */
+const el = {};
 
+function cacheDom() {
+  const ids = [
+    'authGate', 'appRoot', 'authForm', 'passwordInput', 'authError',
+    'logoutBtn', 'workForm', 'workList', 'detailView', 'detailEmpty',
+    'totalWorks', 'totalAssets', 'topSkill', 'monthlyWorkCount',
+    'exportBtn', 'mdExportBtn', 'importInput', 'searchInput',
+    'projectFilter', 'skillFilter', 'listSummary', 'seedBtn',
+    'formTitle', 'formModeHint', 'cancelEditBtn', 'submitBtn',
+    'skillMap', 'skillSummary', 'assetLibrary', 'assetSummary',
+    'monthPicker', 'monthlySummary', 'syncEmail', 'sendMagicLinkBtn',
+    'syncDownBtn', 'syncUpBtn', 'cloudSignOutBtn', 'cloudStatus',
+  ];
+  ids.forEach(id => { el[id] = document.getElementById(id); });
+  // alias
+  el.form = el.workForm;
+}
+
+/* ─── Utility ─── */
 function uid() {
   return `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 }
 
 function escapeHtml(str) {
-  return String(str || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+  const div = document.createElement('div');
+  div.textContent = String(str || '');
+  return div.innerHTML;
 }
 
 function nl2br(text) {
@@ -76,13 +52,16 @@ function nl2br(text) {
 }
 
 function parseSkills(value) {
-  return String(value || '')
-    .split(',')
-    .map(v => v.trim())
-    .filter(Boolean);
+  return String(value || '').split(',').map(v => v.trim()).filter(Boolean);
 }
 
-function normalizeImportedWork(work) {
+function debounce(fn, ms = 200) {
+  let timer;
+  return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+}
+
+/* ─── Data Normalization ─── */
+function normalizeWork(work) {
   return {
     id: work.id || uid(),
     title: work.title || '',
@@ -98,14 +77,19 @@ function normalizeImportedWork(work) {
     result: work.result || '',
     lesson: work.lesson || '',
     skills: Array.isArray(work.skills) ? work.skills : [],
-    asset: work.asset && work.asset.name ? { name: work.asset.name || '', type: work.asset.type || '' } : null,
+    asset: work.asset && work.asset.name ? { name: work.asset.name, type: work.asset.type || '' } : null,
     createdAt: work.createdAt || new Date().toISOString(),
     updatedAt: work.updatedAt || null,
   };
 }
 
+/* ─── Persistence (localStorage) ─── */
 function saveLocal() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ works: state.works }));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ works: state.works }));
+  } catch (e) {
+    console.warn('localStorage 저장 실패:', e);
+  }
 }
 
 function loadLocal() {
@@ -117,52 +101,51 @@ function loadLocal() {
   if (!raw) return;
   try {
     const parsed = JSON.parse(raw);
-    state.works = Array.isArray(parsed.works) ? parsed.works.map(normalizeImportedWork) : [];
+    state.works = Array.isArray(parsed.works) ? parsed.works.map(normalizeWork) : [];
   } catch (e) {
-    console.error(e);
+    console.error('localStorage 파싱 실패:', e);
   }
 }
 
+/* ─── Auth (Password Gate) ─── */
 function isAuthenticated() {
   return localStorage.getItem(AUTH_KEY) === '1';
 }
 
+/*
+  핵심 수정: hidden 클래스의 !important 충돌 제거.
+  - authGate: hidden 속성(HTML native)으로 제어
+  - appRoot: .is-active 클래스로 display:grid 전환 (hidden 클래스 미사용)
+  - detailView: .detail-view-hidden / .detail-view-visible 전용 클래스 사용
+*/
 function showApp() {
-  el.authGate?.classList.add('hidden');
-  el.appRoot?.classList.remove('hidden');
-  el.authError?.classList.add('hidden');
+  el.authGate.setAttribute('hidden', '');
+  el.appRoot.classList.add('is-active');
+  if (el.authError) el.authError.setAttribute('hidden', '');
 }
 
 function showGate() {
-  el.authGate?.classList.remove('hidden');
-  el.appRoot?.classList.add('hidden');
+  el.authGate.removeAttribute('hidden');
+  el.appRoot.classList.remove('is-active');
   if (el.passwordInput) el.passwordInput.value = '';
-  el.authError?.classList.add('hidden');
+  if (el.authError) el.authError.setAttribute('hidden', '');
 }
 
 function normalizePassword(value) {
-  return String(value || '')
-    .normalize('NFC')
-    .replace(/\r?\n/g, '')
-    .trim();
+  return String(value || '').normalize('NFC').replace(/\r?\n/g, '').trim();
 }
 
 function handleAuthSubmit(e) {
   e.preventDefault();
-
   const entered = normalizePassword(el.passwordInput?.value);
   const expected = normalizePassword(SITE_PASSWORD);
-
-  console.log('entered:', entered, entered.length);
-  console.log('expected:', expected, expected.length);
 
   if (entered === expected) {
     localStorage.setItem(AUTH_KEY, '1');
     showApp();
     return;
   }
-
-  el.authError?.classList.remove('hidden');
+  if (el.authError) el.authError.removeAttribute('hidden');
 }
 
 function logout() {
@@ -170,12 +153,14 @@ function logout() {
   showGate();
 }
 
+/* ─── Month Picker ─── */
 function setDefaultMonthPicker() {
   const dates = state.works.map(w => w.date).filter(Boolean).sort().reverse();
   const basis = dates[0] || new Date().toISOString().slice(0, 10);
-  el.monthPicker.value = basis.slice(0, 7);
+  if (el.monthPicker) el.monthPicker.value = basis.slice(0, 7);
 }
 
+/* ─── Career Outputs ─── */
 function buildOutputs(work) {
   const summary = work.summary || work.problem || '주어진 과제';
   const action = work.action || '문제를 구조화하고 실행했다';
@@ -189,6 +174,7 @@ function buildOutputs(work) {
   };
 }
 
+/* ─── Computed Data ─── */
 function getSkillFrequency(works = state.works) {
   const freq = {};
   works.forEach(w => (w.skills || []).forEach(s => { freq[s] = (freq[s] || 0) + 1; }));
@@ -206,17 +192,16 @@ function getSkillOptions() {
 function populateFilters() {
   const currentProject = el.projectFilter.value;
   const currentSkill = el.skillFilter.value;
-
-  const projectOptions = getProjectOptions();
-  const skillOptions = getSkillOptions();
+  const projects = getProjectOptions();
+  const skills = getSkillOptions();
 
   el.projectFilter.innerHTML = '<option value="">모든 프로젝트</option>'
-    + projectOptions.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+    + projects.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
   el.skillFilter.innerHTML = '<option value="">모든 역량</option>'
-    + skillOptions.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+    + skills.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
 
-  el.projectFilter.value = projectOptions.includes(currentProject) ? currentProject : '';
-  el.skillFilter.value = skillOptions.includes(currentSkill) ? currentSkill : '';
+  el.projectFilter.value = projects.includes(currentProject) ? currentProject : '';
+  el.skillFilter.value = skills.includes(currentSkill) ? currentSkill : '';
 }
 
 function getFilteredWorks() {
@@ -227,24 +212,22 @@ function getFilteredWorks() {
   return [...state.works]
     .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
     .filter(w => {
-      const matchesQuery = !query || [w.title, w.project, w.summary, w.problem, ...(w.skills || [])]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-        .includes(query);
-      const matchesProject = !project || w.project === project;
-      const matchesSkill = !skill || (w.skills || []).includes(skill);
-      return matchesQuery && matchesProject && matchesSkill;
+      if (query && ![w.title, w.project, w.summary, w.problem, ...(w.skills || [])]
+        .filter(Boolean).join(' ').toLowerCase().includes(query)) return false;
+      if (project && w.project !== project) return false;
+      if (skill && !(w.skills || []).includes(skill)) return false;
+      return true;
     });
 }
 
+/* ─── Render Functions ─── */
 function renderStats() {
   el.totalWorks.textContent = state.works.length;
   el.totalAssets.textContent = state.works.filter(w => w.asset && w.asset.name).length;
   const top = getSkillFrequency()[0];
   el.topSkill.textContent = top ? top[0] : '-';
-  const selectedMonth = el.monthPicker.value;
-  const monthly = selectedMonth ? state.works.filter(w => String(w.date || '').startsWith(selectedMonth)) : [];
+  const month = el.monthPicker.value;
+  const monthly = month ? state.works.filter(w => String(w.date || '').startsWith(month)) : [];
   el.monthlyWorkCount.textContent = monthly.length;
 }
 
@@ -256,16 +239,15 @@ function renderSkillMap() {
     return;
   }
   const max = entries[0][1] || 1;
-  const totalTags = entries.reduce((sum, [, count]) => sum + count, 0);
-  el.skillSummary.textContent = `총 ${entries.length}개 역량 / 누적 태그 ${totalTags}개`;
+  const total = entries.reduce((sum, [, c]) => sum + c, 0);
+  el.skillSummary.textContent = `총 ${entries.length}개 역량 / 누적 태그 ${total}개`;
   el.skillMap.innerHTML = entries.map(([skill, count]) => {
-    const width = Math.max(8, Math.round((count / max) * 100));
-    return `
-      <div class="skill-row">
-        <div class="skill-name">${escapeHtml(skill)}</div>
-        <div class="skill-bar"><div class="skill-bar-fill" style="width:${width}%"></div></div>
-        <div class="skill-value">${count}</div>
-      </div>`;
+    const pct = Math.max(8, Math.round((count / max) * 100));
+    return `<div class="skill-row">
+      <div class="skill-name">${escapeHtml(skill)}</div>
+      <div class="skill-bar"><div class="skill-bar-fill" style="width:${pct}%"></div></div>
+      <div class="skill-value">${count}</div>
+    </div>`;
   }).join('');
 }
 
@@ -279,17 +261,18 @@ function renderList() {
   }
 
   el.workList.innerHTML = items.map(w => `
-    <div class="work-item ${w.id === state.selectedId ? 'active' : ''}" data-id="${w.id}">
+    <div class="work-item${w.id === state.selectedId ? ' active' : ''}" data-id="${w.id}">
       <h3>${escapeHtml(w.title)}</h3>
       <div class="meta">${escapeHtml(w.date || '')} · ${escapeHtml(w.project || '-')} · ${escapeHtml(w.category || '-')}</div>
       <div class="meta">${escapeHtml(w.summary || '')}</div>
       <div class="tag-list">
         ${(w.skills || []).map(s => `<span class="tag">${escapeHtml(s)}</span>`).join('')}
-        ${w.asset && w.asset.name ? `<span class="tag asset-tag">${escapeHtml(w.asset.name)}</span>` : ''}
+        ${w.asset?.name ? `<span class="tag asset-tag">${escapeHtml(w.asset.name)}</span>` : ''}
       </div>
     </div>`).join('');
 
-  [...document.querySelectorAll('.work-item')].forEach(node => {
+  // 이벤트 위임 대신 개별 바인딩 (항목 수가 적으므로 OK)
+  el.workList.querySelectorAll('.work-item').forEach(node => {
     node.addEventListener('click', () => {
       state.selectedId = node.dataset.id;
       renderDetail();
@@ -299,7 +282,7 @@ function renderList() {
 }
 
 function renderAssets() {
-  const assets = state.works.filter(w => w.asset && w.asset.name).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const assets = state.works.filter(w => w.asset?.name).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   el.assetSummary.textContent = assets.length ? `총 ${assets.length}개 자산` : '아직 자산이 없습니다.';
 
   if (!assets.length) {
@@ -328,15 +311,15 @@ function renderMonthlySummary() {
     return;
   }
 
-  const assets = items.filter(w => w.asset && w.asset.name);
+  const assets = items.filter(w => w.asset?.name);
   const topSkills = getSkillFrequency(items).slice(0, 5);
   const highlights = items.slice(0, 3).map(w => `<li>${escapeHtml(w.title)} — ${escapeHtml(w.result || w.summary || '')}</li>`).join('');
-  const monthlyNarrative = `${month}에는 총 ${items.length}개의 업무를 수행했고, ${assets.length}개의 자산을 남겼다. 핵심 역량은 ${topSkills.map(([skill]) => skill).join(', ') || '기록 없음'} 중심으로 축적되었다.`;
+  const narrative = `${month}에는 총 ${items.length}개의 업무를 수행했고, ${assets.length}개의 자산을 남겼다. 핵심 역량은 ${topSkills.map(([s]) => s).join(', ') || '기록 없음'} 중심으로 축적되었다.`;
 
   el.monthlySummary.innerHTML = `
-    <div class="summary-item"><strong>월간 서술 요약</strong><div class="meta">${escapeHtml(monthlyNarrative)}</div></div>
+    <div class="summary-item"><strong>월간 서술 요약</strong><div class="meta">${escapeHtml(narrative)}</div></div>
     <div class="summary-item"><strong>주요 업무</strong><ul>${highlights}</ul></div>
-    <div class="summary-item"><strong>상위 역량</strong><ul>${topSkills.map(([skill, count]) => `<li>${escapeHtml(skill)} (${count})</li>`).join('')}</ul></div>
+    <div class="summary-item"><strong>상위 역량</strong><ul>${topSkills.map(([s, c]) => `<li>${escapeHtml(s)} (${c})</li>`).join('')}</ul></div>
     <div class="summary-item"><strong>남긴 자산</strong><ul>${assets.length ? assets.map(w => `<li>${escapeHtml(w.asset.name)} (${escapeHtml(w.asset.type || '-')})</li>`).join('') : '<li>없음</li>'}</ul></div>`;
 }
 
@@ -344,13 +327,13 @@ function renderDetail() {
   const work = state.works.find(w => w.id === state.selectedId);
   if (!work) {
     el.detailEmpty.classList.remove('hidden');
-    el.detailView.classList.add('hidden');
+    el.detailView.className = 'detail-view-hidden';
     el.detailView.innerHTML = '';
     return;
   }
-  const outputs = buildOutputs(work);
+  const out = buildOutputs(work);
   el.detailEmpty.classList.add('hidden');
-  el.detailView.classList.remove('hidden');
+  el.detailView.className = 'detail-view-visible';
   el.detailView.innerHTML = `
     <div class="detail-grid">
       <div class="detail-card full">
@@ -372,34 +355,44 @@ function renderDetail() {
       <div class="detail-card"><h3>결과</h3><div>${nl2br(work.result)}</div></div>
       <div class="detail-card"><h3>배운 점</h3><div>${nl2br(work.lesson)}</div></div>
       <div class="detail-card"><h3>역량 태그</h3><div class="tag-list">${(work.skills || []).map(s => `<span class="tag">${escapeHtml(s)}</span>`).join('') || '<span class="muted">없음</span>'}</div></div>
-      <div class="detail-card"><h3>자산</h3><div>${work.asset && work.asset.name ? `${escapeHtml(work.asset.name)} (${escapeHtml(work.asset.type || '-')})` : '<span class="muted">없음</span>'}</div></div>
-      <div class="detail-card full"><h3>이력서 Bullet</h3><pre class="output">${escapeHtml(outputs.resume)}</pre></div>
-      <div class="detail-card"><h3>포트폴리오 문단</h3><pre class="output">${escapeHtml(outputs.portfolio)}</pre></div>
-      <div class="detail-card"><h3>면접 STAR</h3><pre class="output">${escapeHtml(outputs.star)}</pre></div>
+      <div class="detail-card"><h3>자산</h3><div>${work.asset?.name ? `${escapeHtml(work.asset.name)} (${escapeHtml(work.asset.type || '-')})` : '<span class="muted">없음</span>'}</div></div>
+      <div class="detail-card full"><h3>이력서 Bullet</h3><pre class="output">${escapeHtml(out.resume)}</pre></div>
+      <div class="detail-card"><h3>포트폴리오 문단</h3><pre class="output">${escapeHtml(out.portfolio)}</pre></div>
+      <div class="detail-card"><h3>면접 STAR</h3><pre class="output">${escapeHtml(out.star)}</pre></div>
     </div>`;
 
-  el.detailView.querySelector('[data-action="edit"]').addEventListener('click', () => startEdit(work.id));
-  el.detailView.querySelector('[data-action="delete"]').addEventListener('click', () => deleteWork(work.id));
+  el.detailView.querySelector('[data-action="edit"]')?.addEventListener('click', () => startEdit(work.id));
+  el.detailView.querySelector('[data-action="delete"]')?.addEventListener('click', () => deleteWork(work.id));
 }
 
+function renderAll() {
+  renderStats();
+  renderSkillMap();
+  renderList();
+  renderAssets();
+  renderMonthlySummary();
+  renderDetail();
+}
+
+/* ─── Form Logic ─── */
 function workFromForm(form) {
-  const data = new FormData(form);
-  const assetName = (data.get('assetName') || '').trim();
-  const assetType = (data.get('assetType') || '').trim();
+  const d = new FormData(form);
+  const assetName = (d.get('assetName') || '').trim();
+  const assetType = (d.get('assetType') || '').trim();
   return {
-    title: (data.get('title') || '').trim(),
-    date: data.get('date') || '',
-    project: (data.get('project') || '').trim(),
-    category: (data.get('category') || '').trim(),
-    summary: (data.get('summary') || '').trim(),
-    role: (data.get('role') || '').trim(),
-    tools: (data.get('tools') || '').trim(),
-    link: (data.get('link') || '').trim(),
-    problem: (data.get('problem') || '').trim(),
-    action: (data.get('action') || '').trim(),
-    result: (data.get('result') || '').trim(),
-    lesson: (data.get('lesson') || '').trim(),
-    skills: parseSkills(data.get('skills') || ''),
+    title: (d.get('title') || '').trim(),
+    date: d.get('date') || '',
+    project: (d.get('project') || '').trim(),
+    category: (d.get('category') || '').trim(),
+    summary: (d.get('summary') || '').trim(),
+    role: (d.get('role') || '').trim(),
+    tools: (d.get('tools') || '').trim(),
+    link: (d.get('link') || '').trim(),
+    problem: (d.get('problem') || '').trim(),
+    action: (d.get('action') || '').trim(),
+    result: (d.get('result') || '').trim(),
+    lesson: (d.get('lesson') || '').trim(),
+    skills: parseSkills(d.get('skills') || ''),
     asset: assetName ? { name: assetName, type: assetType } : null,
   };
 }
@@ -417,21 +410,22 @@ function startEdit(id) {
   const work = state.works.find(w => w.id === id);
   if (!work) return;
   state.editingId = id;
-  el.form.title.value = work.title || '';
-  el.form.date.value = work.date || '';
-  el.form.project.value = work.project || '';
-  el.form.category.value = work.category || '';
-  el.form.summary.value = work.summary || '';
-  el.form.role.value = work.role || '';
-  el.form.tools.value = work.tools || '';
-  el.form.link.value = work.link || '';
-  el.form.problem.value = work.problem || '';
-  el.form.action.value = work.action || '';
-  el.form.result.value = work.result || '';
-  el.form.lesson.value = work.lesson || '';
-  el.form.skills.value = (work.skills || []).join(', ');
-  el.form.assetName.value = work.asset?.name || '';
-  el.form.assetType.value = work.asset?.type || '';
+  const f = el.form;
+  f.title.value = work.title || '';
+  f.date.value = work.date || '';
+  f.project.value = work.project || '';
+  f.category.value = work.category || '';
+  f.summary.value = work.summary || '';
+  f.role.value = work.role || '';
+  f.tools.value = work.tools || '';
+  f.link.value = work.link || '';
+  f.problem.value = work.problem || '';
+  f.action.value = work.action || '';
+  f.result.value = work.result || '';
+  f.lesson.value = work.lesson || '';
+  f.skills.value = (work.skills || []).join(', ');
+  f.assetName.value = work.asset?.name || '';
+  f.assetType.value = work.asset?.type || '';
   el.formTitle.textContent = '업무 수정';
   el.formModeHint.textContent = '선택한 업무를 수정 중이야. 저장하면 기존 내용이 업데이트돼.';
   el.submitBtn.textContent = '수정 저장';
@@ -439,17 +433,20 @@ function startEdit(id) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+/* ─── CRUD ─── */
 async function persistWorks() {
   saveLocal();
-  if (state.cloud.user) await pushToCloud(true);
+  if (state.cloud.user) {
+    try { await pushToCloud(true); } catch (e) { console.warn('클라우드 동기화 실패:', e); }
+  }
 }
 
 async function upsertWorkFromForm(form) {
   const payload = workFromForm(form);
   if (state.editingId) {
-    state.works = state.works.map(work => work.id === state.editingId
-      ? { ...work, ...payload, updatedAt: new Date().toISOString() }
-      : work);
+    state.works = state.works.map(w => w.id === state.editingId
+      ? { ...w, ...payload, updatedAt: new Date().toISOString() }
+      : w);
     state.selectedId = state.editingId;
   } else {
     const work = { id: uid(), ...payload, createdAt: new Date().toISOString(), updatedAt: null };
@@ -464,9 +461,7 @@ async function upsertWorkFromForm(form) {
 
 async function deleteWork(id) {
   const work = state.works.find(w => w.id === id);
-  if (!work) return;
-  const ok = confirm(`'${work.title}' 업무를 삭제할까요? 이 작업은 되돌릴 수 없습니다.`);
-  if (!ok) return;
+  if (!work || !confirm(`'${work.title}' 업무를 삭제할까요?`)) return;
   state.works = state.works.filter(w => w.id !== id);
   if (state.editingId === id) resetFormMode();
   if (state.selectedId === id) state.selectedId = state.works[0]?.id || null;
@@ -475,57 +470,7 @@ async function deleteWork(id) {
   renderAll();
 }
 
-function exportJson() {
-  const blob = new Blob([JSON.stringify({ works: state.works }, null, 2)], { type: 'application/json' });
-  downloadBlob(blob, 'career-asset-os-data.json');
-}
-
-function exportMarkdown() {
-  const month = el.monthPicker.value;
-  const items = month ? state.works.filter(w => String(w.date || '').startsWith(month)) : state.works;
-  const topSkills = getSkillFrequency(items).slice(0, 5);
-  const lines = [
-    '# Career Asset OS Export',
-    '',
-    `- 생성일: ${new Date().toISOString().slice(0, 10)}`,
-    `- 대상 월: ${month || '전체'}`,
-    `- 업무 수: ${items.length}`,
-    `- 자산 수: ${items.filter(w => w.asset && w.asset.name).length}`,
-    '',
-    '## 상위 역량',
-    ...topSkills.map(([skill, count]) => `- ${skill}: ${count}`),
-    '',
-    '## 업무 목록',
-  ];
-
-  items.forEach((work, idx) => {
-    const outputs = buildOutputs(work);
-    lines.push(
-      '',
-      `### ${idx + 1}. ${work.title}`,
-      `- 날짜: ${work.date || '-'}`,
-      `- 프로젝트: ${work.project || '-'}`,
-      `- 유형: ${work.category || '-'}`,
-      `- 요약: ${work.summary || '-'}`,
-      `- 문제: ${work.problem || '-'}`,
-      `- 행동: ${work.action || '-'}`,
-      `- 결과: ${work.result || '-'}`,
-      `- 배운 점: ${work.lesson || '-'}`,
-      `- 역량: ${(work.skills || []).join(', ') || '-'}`,
-      `- 자산: ${work.asset?.name ? `${work.asset.name} (${work.asset.type || '-'})` : '-'}`,
-      '',
-      '#### 이력서 Bullet',
-      outputs.resume,
-      '',
-      '#### STAR',
-      outputs.star,
-    );
-  });
-
-  const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' });
-  downloadBlob(blob, `career-asset-os-${month || 'all'}.md`);
-}
-
+/* ─── Export / Import ─── */
 function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -535,49 +480,96 @@ function downloadBlob(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
-async function importJson(file) {
-  const reader = new FileReader();
-  reader.onload = async () => {
-    try {
-      const parsed = JSON.parse(reader.result);
-      state.works = Array.isArray(parsed.works) ? parsed.works.map(normalizeImportedWork) : [];
-      state.selectedId = state.works[0]?.id || null;
-      resetFormMode();
-      await persistWorks();
-      populateFilters();
-      setDefaultMonthPicker();
-      renderAll();
-    } catch (e) {
-      alert('JSON 파일을 읽지 못했습니다.');
-    }
-  };
-  reader.readAsText(file);
+function exportJson() {
+  downloadBlob(
+    new Blob([JSON.stringify({ works: state.works }, null, 2)], { type: 'application/json' }),
+    'career-asset-os-data.json',
+  );
 }
 
+function exportMarkdown() {
+  const month = el.monthPicker.value;
+  const items = month ? state.works.filter(w => String(w.date || '').startsWith(month)) : state.works;
+  const topSkills = getSkillFrequency(items).slice(0, 5);
+  const lines = [
+    '# Career Asset OS Export', '',
+    `- 생성일: ${new Date().toISOString().slice(0, 10)}`,
+    `- 대상 월: ${month || '전체'}`,
+    `- 업무 수: ${items.length}`,
+    `- 자산 수: ${items.filter(w => w.asset?.name).length}`,
+    '', '## 상위 역량',
+    ...topSkills.map(([s, c]) => `- ${s}: ${c}`),
+    '', '## 업무 목록',
+  ];
+  items.forEach((work, i) => {
+    const out = buildOutputs(work);
+    lines.push('', `### ${i + 1}. ${work.title}`,
+      `- 날짜: ${work.date || '-'}`, `- 프로젝트: ${work.project || '-'}`,
+      `- 유형: ${work.category || '-'}`, `- 요약: ${work.summary || '-'}`,
+      `- 문제: ${work.problem || '-'}`, `- 행동: ${work.action || '-'}`,
+      `- 결과: ${work.result || '-'}`, `- 배운 점: ${work.lesson || '-'}`,
+      `- 역량: ${(work.skills || []).join(', ') || '-'}`,
+      `- 자산: ${work.asset?.name ? `${work.asset.name} (${work.asset.type || '-'})` : '-'}`,
+      '', '#### 이력서 Bullet', out.resume,
+      '', '#### STAR', out.star,
+    );
+  });
+  downloadBlob(
+    new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' }),
+    `career-asset-os-${month || 'all'}.md`,
+  );
+}
+
+async function importJson(file) {
+  const text = await file.text();
+  try {
+    const parsed = JSON.parse(text);
+    state.works = Array.isArray(parsed.works) ? parsed.works.map(normalizeWork) : [];
+    state.selectedId = state.works[0]?.id || null;
+    resetFormMode();
+    await persistWorks();
+    populateFilters();
+    setDefaultMonthPicker();
+    renderAll();
+  } catch {
+    alert('JSON 파일을 읽지 못했습니다.');
+  }
+}
+
+/* ─── Seed Demo ─── */
 async function seedDemo() {
   if (state.works.length && !confirm('기존 데이터가 있습니다. 데모 데이터로 바꿀까요?')) return;
   state.works = [
     {
       id: uid(), title: '주간 리포트 구조 개선', date: '2026-03-15', project: '성과 보고 체계', category: '분석/리포팅',
       summary: '반복되는 주간 보고서를 재사용 가능한 구조로 정리', role: '기획 및 작성', tools: 'Google Sheets, Markdown', link: '',
-      problem: '매주 보고서 형식과 스토리라인이 흔들려 작성 시간이 길어졌다.', action: '보고서 섹션을 고정하고 핵심 지표-원인-액션 구조로 템플릿화했다.',
-      result: '작성 시간이 줄고 팀 공유용 문장 품질이 안정화되었다.', lesson: '반복 업무일수록 템플릿을 먼저 만드는 것이 효과적이다.',
-      skills: ['리포팅', '구조 설계', '문서화'], asset: { name: '주간 보고서 템플릿', type: 'template' }, createdAt: new Date().toISOString(), updatedAt: null,
+      problem: '매주 보고서 형식과 스토리라인이 흔들려 작성 시간이 길어졌다.',
+      action: '보고서 섹션을 고정하고 핵심 지표-원인-액션 구조로 템플릿화했다.',
+      result: '작성 시간이 줄고 팀 공유용 문장 품질이 안정화되었다.',
+      lesson: '반복 업무일수록 템플릿을 먼저 만드는 것이 효과적이다.',
+      skills: ['리포팅', '구조 설계', '문서화'], asset: { name: '주간 보고서 템플릿', type: 'template' },
+      createdAt: new Date().toISOString(), updatedAt: null,
     },
     {
       id: uid(), title: 'AI 모자이크 검수 기준 정리', date: '2026-03-14', project: 'AI 이미지 운영', category: '운영/품질',
       summary: '모델 결과물 검수 기준을 명확히 정리', role: '운영 정리', tools: '문서, 이미지 샘플', link: '',
-      problem: '해상도에 따라 결과 체감이 달라 검수 기준이 흔들렸다.', action: '실패 케이스를 유형화하고 체크리스트 기준으로 정리했다.',
-      result: '판단 기준이 명확해져 커뮤니케이션 비용이 줄었다.', lesson: '애매한 감각 기준은 반드시 체크리스트로 외부화해야 한다.',
-      skills: ['문제 해결', '운영', '체크리스트 설계'], asset: { name: '모자이크 검수 체크리스트', type: 'checklist' }, createdAt: new Date().toISOString(), updatedAt: null,
+      problem: '해상도에 따라 결과 체감이 달라 검수 기준이 흔들렸다.',
+      action: '실패 케이스를 유형화하고 체크리스트 기준으로 정리했다.',
+      result: '판단 기준이 명확해져 커뮤니케이션 비용이 줄었다.',
+      lesson: '애매한 감각 기준은 반드시 체크리스트로 외부화해야 한다.',
+      skills: ['문제 해결', '운영', '체크리스트 설계'], asset: { name: '모자이크 검수 체크리스트', type: 'checklist' },
+      createdAt: new Date().toISOString(), updatedAt: null,
     },
     {
       id: uid(), title: '업무 자산화 MVP 구현', date: '2026-03-13', project: 'Career Asset OS', category: '개발/MVP',
       summary: '실무를 커리어 문장으로 바꾸는 개인용 웹앱 MVP를 구현', role: '기획 및 구현', tools: 'HTML, CSS, JavaScript', link: '',
-      problem: '업무 경험이 흩어져 있어 이력서나 포트폴리오로 바로 연결되기 어려웠다.', action: '입력-구조화-출력 흐름을 화면으로 설계하고 localStorage 기반 MVP를 만들었다.',
-      result: '업무를 기록하는 즉시 커리어 문장으로 변환할 수 있는 기반이 생겼다.', lesson: '작은 MVP라도 실제로 써볼 수 있게 만들면 개선 포인트가 빨리 보인다.',
-      skills: ['기획', '프론트엔드', '문제 해결', '구조 설계'], asset: { name: 'Career Asset OS MVP', type: 'document' }, createdAt: new Date().toISOString(), updatedAt: null,
-    }
+      problem: '업무 경험이 흩어져 있어 이력서나 포트폴리오로 바로 연결되기 어려웠다.',
+      action: '입력-구조화-출력 흐름을 화면으로 설계하고 localStorage 기반 MVP를 만들었다.',
+      result: '업무를 기록하는 즉시 커리어 문장으로 변환할 수 있는 기반이 생겼다.',
+      lesson: '작은 MVP라도 실제로 써볼 수 있게 만들면 개선 포인트가 빨리 보인다.',
+      skills: ['기획', '프론트엔드', '문제 해결', '구조 설계'], asset: { name: 'Career Asset OS MVP', type: 'document' },
+      createdAt: new Date().toISOString(), updatedAt: null,
+    },
   ];
   state.selectedId = state.works[0].id;
   resetFormMode();
@@ -587,17 +579,9 @@ async function seedDemo() {
   renderAll();
 }
 
-function renderAll() {
-  renderStats();
-  renderSkillMap();
-  renderList();
-  renderAssets();
-  renderMonthlySummary();
-  renderDetail();
-}
-
-function setCloudStatus(message, type = '') {
-  el.cloudStatus.textContent = message;
+/* ─── Cloud (Supabase) ─── */
+function setCloudStatus(msg, type = '') {
+  el.cloudStatus.textContent = msg;
   el.cloudStatus.classList.remove('ok', 'warn', 'error');
   if (type) el.cloudStatus.classList.add(type);
 }
@@ -608,83 +592,97 @@ function cloudReady() {
 
 function initSupabase() {
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-    setCloudStatus('localStorage 모드. app.js에 SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY를 넣으면 클라우드 동기화가 켜집니다.', 'warn');
+    setCloudStatus('localStorage 모드. app.js에 Supabase 정보를 넣으면 클라우드 동기화가 켜집니다.', 'warn');
     return;
   }
-  if (!window.supabase || !window.supabase.createClient) {
-    setCloudStatus('Supabase 라이브러리를 불러오지 못했습니다.', 'error');
+  // Supabase 라이브러리가 아직 로드 안 됐으면 재시도
+  if (!window.supabase?.createClient) {
+    setCloudStatus('Supabase 라이브러리 로드 대기 중...', 'warn');
+    // defer 스크립트라 약간 늦을 수 있으므로 재시도
+    setTimeout(() => {
+      if (window.supabase?.createClient) {
+        doInitSupabase();
+      } else {
+        setCloudStatus('Supabase 라이브러리를 불러오지 못했습니다. 네트워크를 확인하세요.', 'error');
+      }
+    }, 2000);
     return;
   }
+  doInitSupabase();
+}
 
-  state.cloud.client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-    },
-  });
-  state.cloud.enabled = true;
-  setCloudStatus('Supabase 연결 준비 완료. 이메일로 매직 링크를 보내 로그인하세요.', 'warn');
+function doInitSupabase() {
+  try {
+    state.cloud.client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+    });
+    state.cloud.enabled = true;
+    setCloudStatus('Supabase 연결 준비 완료. 이메일로 매직 링크를 보내 로그인하세요.', 'warn');
+    // 세션 체크
+    refreshCloudSession();
+    state.cloud.client.auth.onAuthStateChange(async () => {
+      await refreshCloudSession();
+    });
+  } catch (e) {
+    console.error('Supabase 초기화 실패:', e);
+    setCloudStatus(`Supabase 초기화 실패: ${e.message}`, 'error');
+  }
 }
 
 async function refreshCloudSession() {
   if (!state.cloud.client) return;
-  const { data, error } = await state.cloud.client.auth.getSession();
-  if (error) {
-    setCloudStatus(`세션 확인 실패: ${error.message}`, 'error');
-    return;
-  }
-  const user = data.session?.user || null;
-  state.cloud.user = user;
-  if (user) {
-    el.syncEmail.value = user.email || '';
-    setCloudStatus(`클라우드 로그인됨: ${user.email}`, 'ok');
-  } else {
-    setCloudStatus('클라우드 미로그인 상태입니다. localStorage 모드로 계속 사용할 수 있습니다.', 'warn');
+  try {
+    const { data, error } = await state.cloud.client.auth.getSession();
+    if (error) {
+      setCloudStatus(`세션 확인 실패: ${error.message}`, 'error');
+      return;
+    }
+    const user = data.session?.user || null;
+    state.cloud.user = user;
+    if (user) {
+      el.syncEmail.value = user.email || '';
+      setCloudStatus(`클라우드 로그인됨: ${user.email}`, 'ok');
+    } else {
+      setCloudStatus('클라우드 미로그인. localStorage 모드로 사용 중입니다.', 'warn');
+    }
+  } catch (e) {
+    setCloudStatus(`세션 확인 오류: ${e.message}`, 'error');
   }
 }
 
 async function sendMagicLink() {
   if (!state.cloud.client) {
-    alert('먼저 app.js에 Supabase URL과 Publishable key를 넣어주세요.');
+    alert('먼저 app.js에 Supabase URL과 key를 넣어주세요.');
     return;
   }
   const email = el.syncEmail.value.trim();
-  if (!email) {
-    alert('이메일을 입력해주세요.');
-    return;
-  }
+  if (!email) { alert('이메일을 입력해주세요.'); return; }
+
   const redirectTo = window.location.href.split('#')[0];
   const { error } = await state.cloud.client.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: redirectTo },
+    email, options: { emailRedirectTo: redirectTo },
   });
   if (error) {
     setCloudStatus(`매직 링크 발송 실패: ${error.message}`, 'error');
-    alert(error.message);
     return;
   }
   setCloudStatus(`매직 링크를 ${email}로 보냈습니다. 메일에서 링크를 눌러 돌아오세요.`, 'ok');
 }
 
 async function pullFromCloud() {
-  if (!cloudReady()) {
-    alert('클라우드 로그인 후 사용할 수 있습니다.');
-    return;
-  }
-  setCloudStatus('클라우드에서 데이터를 불러오는 중...', 'warn');
+  if (!cloudReady()) { alert('클라우드 로그인 후 사용할 수 있습니다.'); return; }
+  setCloudStatus('클라우드에서 불러오는 중...', 'warn');
+
   const { data, error } = await state.cloud.client
-    .from('works')
-    .select('work_id,payload,updated_at')
+    .from('works').select('work_id,payload,updated_at')
     .eq('user_id', state.cloud.user.id)
     .order('updated_at', { ascending: false });
 
   if (error) {
     setCloudStatus(`불러오기 실패: ${error.message}`, 'error');
-    alert(error.message);
     return;
   }
-  state.works = (data || []).map(row => normalizeImportedWork({ id: row.work_id, ...row.payload }));
+  state.works = (data || []).map(row => normalizeWork({ id: row.work_id, ...row.payload }));
   state.selectedId = state.works[0]?.id || null;
   saveLocal();
   populateFilters();
@@ -697,53 +695,41 @@ async function pullFromCloud() {
 async function pushToCloud(silent = false) {
   if (!cloudReady()) return;
 
-  const remoteIdsResult = await state.cloud.client
-    .from('works')
-    .select('work_id')
-    .eq('user_id', state.cloud.user.id);
-
-  if (remoteIdsResult.error) {
-    setCloudStatus(`클라우드 조회 실패: ${remoteIdsResult.error.message}`, 'error');
-    if (!silent) alert(remoteIdsResult.error.message);
+  const { data: remoteData, error: fetchErr } = await state.cloud.client
+    .from('works').select('work_id').eq('user_id', state.cloud.user.id);
+  if (fetchErr) {
+    setCloudStatus(`클라우드 조회 실패: ${fetchErr.message}`, 'error');
+    if (!silent) alert(fetchErr.message);
     return;
   }
 
-  const remoteIds = new Set((remoteIdsResult.data || []).map(row => row.work_id));
+  const remoteIds = new Set((remoteData || []).map(r => r.work_id));
   const localIds = new Set(state.works.map(w => w.id));
-  const idsToDelete = [...remoteIds].filter(id => !localIds.has(id));
+  const toDelete = [...remoteIds].filter(id => !localIds.has(id));
 
-  if (idsToDelete.length) {
-    const { error: deleteError } = await state.cloud.client
-      .from('works')
-      .delete()
-      .eq('user_id', state.cloud.user.id)
-      .in('work_id', idsToDelete);
-    if (deleteError) {
-      setCloudStatus(`클라우드 삭제 동기화 실패: ${deleteError.message}`, 'error');
-      if (!silent) alert(deleteError.message);
+  if (toDelete.length) {
+    const { error } = await state.cloud.client.from('works').delete()
+      .eq('user_id', state.cloud.user.id).in('work_id', toDelete);
+    if (error) {
+      setCloudStatus(`삭제 동기화 실패: ${error.message}`, 'error');
       return;
     }
   }
 
   if (state.works.length) {
-    const rows = state.works.map(work => ({
+    const rows = state.works.map(w => ({
       user_id: state.cloud.user.id,
-      work_id: work.id,
-      payload: { ...work, id: undefined },
+      work_id: w.id,
+      payload: { ...w, id: undefined },
       updated_at: new Date().toISOString(),
     }));
-
-    const { error: upsertError } = await state.cloud.client
-      .from('works')
-      .upsert(rows, { onConflict: 'user_id,work_id' });
-
-    if (upsertError) {
-      setCloudStatus(`클라우드 저장 실패: ${upsertError.message}`, 'error');
-      if (!silent) alert(upsertError.message);
+    const { error } = await state.cloud.client.from('works').upsert(rows, { onConflict: 'user_id,work_id' });
+    if (error) {
+      setCloudStatus(`클라우드 저장 실패: ${error.message}`, 'error');
+      if (!silent) alert(error.message);
       return;
     }
   }
-
   setCloudStatus(`클라우드에 ${state.works.length}개 업무를 반영했습니다.`, 'ok');
 }
 
@@ -754,14 +740,22 @@ async function signOutCloud() {
   setCloudStatus('클라우드 로그아웃됨. localStorage 모드로 전환되었습니다.', 'warn');
 }
 
+/* ─── Event Binding ─── */
 function bindEvents() {
   el.form.addEventListener('submit', async (e) => { e.preventDefault(); await upsertWorkFromForm(el.form); });
   el.exportBtn.addEventListener('click', exportJson);
   el.mdExportBtn.addEventListener('click', exportMarkdown);
-  el.importInput.addEventListener('change', async (e) => { const file = e.target.files?.[0]; if (file) await importJson(file); });
-  el.searchInput.addEventListener('input', renderList);
+  el.importInput.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (file) await importJson(file);
+  });
+
+  // 검색: debounce 적용
+  const debouncedRenderList = debounce(renderList, 200);
+  el.searchInput.addEventListener('input', debouncedRenderList);
   el.projectFilter.addEventListener('change', renderList);
   el.skillFilter.addEventListener('change', renderList);
+
   el.seedBtn.addEventListener('click', seedDemo);
   el.cancelEditBtn.addEventListener('click', resetFormMode);
   el.monthPicker.addEventListener('change', () => { renderStats(); renderMonthlySummary(); });
@@ -773,24 +767,32 @@ function bindEvents() {
   el.cloudSignOutBtn.addEventListener('click', signOutCloud);
 }
 
-async function init() {
+/* ─── Init ─── */
+function init() {
+  cacheDom();
   loadLocal();
   populateFilters();
   setDefaultMonthPicker();
   state.selectedId = state.works[0]?.id || null;
   resetFormMode();
   renderAll();
-  if (isAuthenticated()) showApp(); else showGate();
 
-  initSupabase();
-  if (state.cloud.client) {
-    await refreshCloudSession();
-    state.cloud.client.auth.onAuthStateChange(async (_event, session) => {
-      state.cloud.user = session?.user || null;
-      await refreshCloudSession();
-    });
+  // 인증 체크 → 화면 전환
+  if (isAuthenticated()) {
+    showApp();
+  } else {
+    showGate();
   }
+
+  bindEvents();
+
+  // Supabase는 비동기로 초기화 (실패해도 앱 자체는 정상 작동)
+  initSupabase();
 }
 
-bindEvents();
-init();
+// DOMContentLoaded 보장 (defer 스크립트지만 안전장치)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
