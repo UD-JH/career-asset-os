@@ -7,12 +7,27 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="app">
+  <div id="authGate" class="auth-gate">
+    <div class="auth-card">
+      <div class="auth-badge">Private Access</div>
+      <h1>Career Asset OS</h1>
+      <p class="muted auth-copy">비밀번호를 입력해야 진입할 수 있어. GitHub Pages용 정적 사이트 특성상 완전한 보안은 아니고, 가벼운 접근 제한용이야.</p>
+      <form id="authForm" class="auth-form">
+        <input id="passwordInput" type="password" placeholder="비밀번호 입력" autocomplete="current-password" required />
+        <button type="submit" class="primary">입장하기</button>
+      </form>
+      <div id="authError" class="auth-error hidden">비밀번호가 올바르지 않습니다.</div>
+      <div class="muted auth-help">비밀번호는 <code>app.js</code> 상단의 <code>SITE_PASSWORD</code> 값을 바꿔서 설정할 수 있어.</div>
+    </div>
+  </div>
+
+  <div class="app hidden" id="appRoot">
     <aside class="sidebar">
       <h1>Career Asset OS</h1>
       <p class="muted">업무를 자산과 커리어 언어로 바꾸는 개인 OS</p>
 
       <div class="sidebar-block">
+        <button id="logoutBtn" class="secondary">잠금 / 로그아웃</button>
         <button id="seedBtn" class="secondary">데모 데이터 넣기</button>
         <button id="exportBtn" class="secondary">JSON 내보내기</button>
         <button id="mdExportBtn" class="secondary">Markdown 내보내기</button>

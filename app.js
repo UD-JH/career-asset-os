@@ -1,4 +1,7 @@
 const STORAGE_KEY = 'career-asset-os-data-v3';
+const SITE_PASSWORD = 'change-this-password'; // 배포 전 원하는 비밀번호로 바꿔줘
+const AUTH_KEY = 'career-asset-os-auth-v1';
+
 
 const state = {
   works: [],
@@ -396,6 +399,12 @@ function upsertWorkFromForm(form) {
   save();
   populateFilters();
   renderAll();
+
+if (isAuthenticated()) {
+  showApp();
+} else {
+  showGate();
+}
   resetFormMode();
 }
 
@@ -410,6 +419,12 @@ function deleteWork(id) {
   save();
   populateFilters();
   renderAll();
+
+if (isAuthenticated()) {
+  showApp();
+} else {
+  showGate();
+}
 }
 
 function exportJson() {
@@ -484,6 +499,12 @@ function importJson(file) {
       populateFilters();
       setDefaultMonthPicker();
       renderAll();
+
+if (isAuthenticated()) {
+  showApp();
+} else {
+  showGate();
+}
     } catch (e) {
       alert('JSON 파일을 읽지 못했습니다.');
     }
@@ -529,6 +550,12 @@ function seedDemo() {
   populateFilters();
   setDefaultMonthPicker();
   renderAll();
+
+if (isAuthenticated()) {
+  showApp();
+} else {
+  showGate();
+}
 }
 
 function renderAll() {
@@ -550,6 +577,8 @@ el.skillFilter.addEventListener('change', renderList);
 el.seedBtn.addEventListener('click', seedDemo);
 el.cancelEditBtn.addEventListener('click', resetFormMode);
 el.monthPicker.addEventListener('change', () => { renderStats(); renderMonthlySummary(); });
+el.authForm.addEventListener('submit', handleAuthSubmit);
+el.logoutBtn.addEventListener('click', logout);
 
 load();
 populateFilters();
@@ -557,3 +586,9 @@ setDefaultMonthPicker();
 state.selectedId = state.works[0]?.id || null;
 resetFormMode();
 renderAll();
+
+if (isAuthenticated()) {
+  showApp();
+} else {
+  showGate();
+}
