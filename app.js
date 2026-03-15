@@ -1,23 +1,20 @@
 const STORAGE_KEY = 'career-asset-os-data-v5';
 const AUTH_KEY = 'career-asset-os-auth-v1';
-const SITE_PASSWORD = 'change-this-password';
+const SITE_PASSWORD = 'jiheon0409';
 
-/**
- * Supabase 설정값을 넣어줘.
- * 예:
- * const SUPABASE_URL = 'https://xxxx.supabase.co';
- * const SUPABASE_ANON_KEY = 'sb_publishable_xxxx' 또는 legacy anon key
- */
+// Supabase 값을 여기에 넣어줘.
 const SUPABASE_URL = 'https://qhndtmybuyopztxqswqc.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_whlWNk_L6g_lnABT9UNOkw_GW31-I3E';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_whlWNk_L6g_lnABT9UNOkw_GW31-I3E';
 
 const state = {
   works: [],
   selectedId: null,
   editingId: null,
-  supabase: null,
-  session: null,
-  loading: false,
+  cloud: {
+    enabled: false,
+    client: null,
+    user: null,
+  },
 };
 
 const el = {
@@ -26,6 +23,7 @@ const el = {
   authForm: document.getElementById('authForm'),
   passwordInput: document.getElementById('passwordInput'),
   authError: document.getElementById('authError'),
+  logoutBtn: document.getElementById('logoutBtn'),
   form: document.getElementById('workForm'),
   workList: document.getElementById('workList'),
   detailView: document.getElementById('detailView'),
@@ -52,23 +50,16 @@ const el = {
   assetSummary: document.getElementById('assetSummary'),
   monthPicker: document.getElementById('monthPicker'),
   monthlySummary: document.getElementById('monthlySummary'),
-  syncStatus: document.getElementById('syncStatus'),
-  syncNote: document.getElementById('syncNote'),
-  emailInput: document.getElementById('emailInput'),
-  loginBtn: document.getElementById('loginBtn'),
-  logoutBtn: document.getElementById('logoutBtn'),
+  syncEmail: document.getElementById('syncEmail'),
+  sendMagicLinkBtn: document.getElementById('sendMagicLinkBtn'),
+  syncDownBtn: document.getElementById('syncDownBtn'),
+  syncUpBtn: document.getElementById('syncUpBtn'),
+  cloudSignOutBtn: document.getElementById('cloudSignOutBtn'),
+  cloudStatus: document.getElementById('cloudStatus'),
 };
 
 function uid() {
-  return `${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
-}
-
-function hasSupabaseConfig() {
-  return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
-}
-
-function isCloudMode() {
-  return Boolean(state.supabase && state.session?.user);
+  return `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 }
 
 function escapeHtml(str) {
@@ -91,7 +82,7 @@ function parseSkills(value) {
     .filter(Boolean);
 }
 
-function normalizeWork(work) {
+function normalizeImportedWork(work) {
   return {
     id: work.id || uid(),
     title: work.title || '',
@@ -109,53 +100,8 @@ function normalizeWork(work) {
     skills: Array.isArray(work.skills) ? work.skills : [],
     asset: work.asset && work.asset.name ? { name: work.asset.name || '', type: work.asset.type || '' } : null,
     createdAt: work.createdAt || new Date().toISOString(),
-    updatedAt: work.updatedAt || work.createdAt || null,
+    updatedAt: work.updatedAt || null,
   };
-}
-
-function toDbRow(work) {
-  return {
-    id: work.id,
-    user_id: state.session?.user?.id || null,
-    title: work.title,
-    work_date: work.date || null,
-    project: work.project,
-    category: work.category,
-    summary: work.summary,
-    role: work.role,
-    tools: work.tools,
-    link: work.link,
-    problem: work.problem,
-    action: work.action,
-    result: work.result,
-    lesson: work.lesson,
-    skills: work.skills || [],
-    asset: work.asset || null,
-    created_at: work.createdAt || new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
-}
-
-function fromDbRow(row) {
-  return normalizeWork({
-    id: row.id,
-    title: row.title,
-    date: row.work_date,
-    project: row.project,
-    category: row.category,
-    summary: row.summary,
-    role: row.role,
-    tools: row.tools,
-    link: row.link,
-    problem: row.problem,
-    action: row.action,
-    result: row.result,
-    lesson: row.lesson,
-    skills: row.skills || [],
-    asset: row.asset || null,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  });
 }
 
 function saveLocal() {
@@ -164,60 +110,50 @@ function saveLocal() {
 
 function loadLocal() {
   const raw = localStorage.getItem(STORAGE_KEY)
+    || localStorage.getItem('career-asset-os-data-v4')
     || localStorage.getItem('career-asset-os-data-v3')
     || localStorage.getItem('career-asset-os-data-v2')
     || localStorage.getItem('career-asset-os-data-v1');
   if (!raw) return;
   try {
     const parsed = JSON.parse(raw);
-    state.works = Array.isArray(parsed.works) ? parsed.works.map(normalizeWork) : [];
+    state.works = Array.isArray(parsed.works) ? parsed.works.map(normalizeImportedWork) : [];
   } catch (e) {
     console.error(e);
   }
 }
 
-async function initSupabase() {
-  if (!hasSupabaseConfig()) return;
-  state.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  const { data } = await state.supabase.auth.getSession();
-  state.session = data.session || null;
-
-  state.supabase.auth.onAuthStateChange(async (_event, session) => {
-    state.session = session || null;
-    updateSyncStatus();
-    await loadWorks();
-  });
+function isAuthenticated() {
+  return localStorage.getItem(AUTH_KEY) === '1';
 }
 
-async function sendMagicLink() {
-  if (!state.supabase) {
-    alert('먼저 app.js에 SUPABASE_URL과 SUPABASE_ANON_KEY를 넣어줘.');
-    return;
-  }
-  const email = el.emailInput.value.trim();
-  if (!email) {
-    alert('로그인 이메일을 입력해줘.');
-    return;
-  }
-  const redirectTo = `${window.location.origin}${window.location.pathname}`;
-  const { error } = await state.supabase.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: redirectTo },
-  });
-  if (error) {
-    alert(`로그인 링크 발송 실패: ${error.message}`);
-    return;
-  }
-  alert('이메일로 매직 링크를 보냈어. 메일에서 링크를 누른 뒤 다시 이 페이지로 돌아오면 돼.');
+function showApp() {
+  el.authGate?.classList.add('hidden');
+  el.appRoot?.classList.remove('hidden');
+  el.authError?.classList.add('hidden');
 }
 
-async function logout() {
-  if (state.supabase && state.session) {
-    await state.supabase.auth.signOut();
+function showGate() {
+  el.authGate?.classList.remove('hidden');
+  el.appRoot?.classList.add('hidden');
+  if (el.passwordInput) el.passwordInput.value = '';
+  el.authError?.classList.add('hidden');
+}
+
+function handleAuthSubmit(e) {
+  e.preventDefault();
+  const password = el.passwordInput?.value ?? '';
+  if (password === SITE_PASSWORD) {
+    localStorage.setItem(AUTH_KEY, '1');
+    showApp();
+    return;
   }
-  state.session = null;
-  updateSyncStatus();
-  await loadWorks();
+  el.authError?.classList.remove('hidden');
+}
+
+function logout() {
+  localStorage.removeItem(AUTH_KEY);
+  showGate();
 }
 
 function setDefaultMonthPicker() {
@@ -257,13 +193,16 @@ function populateFilters() {
   const currentProject = el.projectFilter.value;
   const currentSkill = el.skillFilter.value;
 
-  el.projectFilter.innerHTML = '<option value="">모든 프로젝트</option>'
-    + getProjectOptions().map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
-  el.skillFilter.innerHTML = '<option value="">모든 역량</option>'
-    + getSkillOptions().map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  const projectOptions = getProjectOptions();
+  const skillOptions = getSkillOptions();
 
-  el.projectFilter.value = getProjectOptions().includes(currentProject) ? currentProject : '';
-  el.skillFilter.value = getSkillOptions().includes(currentSkill) ? currentSkill : '';
+  el.projectFilter.innerHTML = '<option value="">모든 프로젝트</option>'
+    + projectOptions.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  el.skillFilter.innerHTML = '<option value="">모든 역량</option>'
+    + skillOptions.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+
+  el.projectFilter.value = projectOptions.includes(currentProject) ? currentProject : '';
+  el.skillFilter.value = skillOptions.includes(currentSkill) ? currentSkill : '';
 }
 
 function getFilteredWorks() {
@@ -272,7 +211,7 @@ function getFilteredWorks() {
   const skill = el.skillFilter.value;
 
   return [...state.works]
-    .sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.createdAt || '').localeCompare(a.createdAt || ''))
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
     .filter(w => {
       const matchesQuery = !query || [w.title, w.project, w.summary, w.problem, ...(w.skills || [])]
         .filter(Boolean)
@@ -290,7 +229,6 @@ function renderStats() {
   el.totalAssets.textContent = state.works.filter(w => w.asset && w.asset.name).length;
   const top = getSkillFrequency()[0];
   el.topSkill.textContent = top ? top[0] : '-';
-
   const selectedMonth = el.monthPicker.value;
   const monthly = selectedMonth ? state.works.filter(w => String(w.date || '').startsWith(selectedMonth)) : [];
   el.monthlyWorkCount.textContent = monthly.length;
@@ -347,10 +285,7 @@ function renderList() {
 }
 
 function renderAssets() {
-  const assets = state.works
-    .filter(w => w.asset && w.asset.name)
-    .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-
+  const assets = state.works.filter(w => w.asset && w.asset.name).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   el.assetSummary.textContent = assets.length ? `총 ${assets.length}개 자산` : '아직 자산이 없습니다.';
 
   if (!assets.length) {
@@ -373,7 +308,6 @@ function renderMonthlySummary() {
     el.monthlySummary.innerHTML = '<div class="empty-state">월을 선택하면 요약이 생성됩니다.</div>';
     return;
   }
-
   const items = state.works.filter(w => String(w.date || '').startsWith(month));
   if (!items.length) {
     el.monthlySummary.innerHTML = `<div class="empty-state">${escapeHtml(month)}에 기록된 업무가 없습니다.</div>`;
@@ -386,22 +320,10 @@ function renderMonthlySummary() {
   const monthlyNarrative = `${month}에는 총 ${items.length}개의 업무를 수행했고, ${assets.length}개의 자산을 남겼다. 핵심 역량은 ${topSkills.map(([skill]) => skill).join(', ') || '기록 없음'} 중심으로 축적되었다.`;
 
   el.monthlySummary.innerHTML = `
-    <div class="summary-item">
-      <strong>월간 서술 요약</strong>
-      <div class="meta">${escapeHtml(monthlyNarrative)}</div>
-    </div>
-    <div class="summary-item">
-      <strong>주요 업무</strong>
-      <ul>${highlights}</ul>
-    </div>
-    <div class="summary-item">
-      <strong>상위 역량</strong>
-      <ul>${topSkills.map(([skill, count]) => `<li>${escapeHtml(skill)} (${count})</li>`).join('')}</ul>
-    </div>
-    <div class="summary-item">
-      <strong>남긴 자산</strong>
-      <ul>${assets.length ? assets.map(w => `<li>${escapeHtml(w.asset.name)} (${escapeHtml(w.asset.type || '-')})</li>`).join('') : '<li>없음</li>'}</ul>
-    </div>`;
+    <div class="summary-item"><strong>월간 서술 요약</strong><div class="meta">${escapeHtml(monthlyNarrative)}</div></div>
+    <div class="summary-item"><strong>주요 업무</strong><ul>${highlights}</ul></div>
+    <div class="summary-item"><strong>상위 역량</strong><ul>${topSkills.map(([skill, count]) => `<li>${escapeHtml(skill)} (${count})</li>`).join('')}</ul></div>
+    <div class="summary-item"><strong>남긴 자산</strong><ul>${assets.length ? assets.map(w => `<li>${escapeHtml(w.asset.name)} (${escapeHtml(w.asset.type || '-')})</li>`).join('') : '<li>없음</li>'}</ul></div>`;
 }
 
 function renderDetail() {
@@ -503,90 +425,27 @@ function startEdit(id) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-async function loadWorks() {
-  if (isCloudMode()) {
-    const { data, error } = await state.supabase
-      .from('works')
-      .select('*')
-      .order('work_date', { ascending: false })
-      .order('created_at', { ascending: false });
-    if (error) {
-      console.error(error);
-      alert(`Supabase 로드 실패: ${error.message}`);
-      loadLocal();
-    } else {
-      state.works = (data || []).map(fromDbRow);
-    }
-  } else {
-    loadLocal();
-  }
-  state.selectedId = state.works[0]?.id || null;
-  populateFilters();
-  setDefaultMonthPicker();
-  renderAll();
-  updateSyncStatus();
-}
-
-async function persistWork(work) {
-  if (isCloudMode()) {
-    const { error } = await state.supabase.from('works').upsert(toDbRow(work));
-    if (error) throw error;
-  } else {
-    saveLocal();
-  }
-}
-
-async function removeWork(id) {
-  if (isCloudMode()) {
-    const { error } = await state.supabase.from('works').delete().eq('id', id);
-    if (error) throw error;
-  } else {
-    saveLocal();
-  }
-}
-
-async function replaceAllWorks(newWorks) {
-  state.works = newWorks.map(normalizeWork);
-  if (isCloudMode()) {
-    const existingIds = (await state.supabase.from('works').select('id')).data?.map(row => row.id) || [];
-    if (existingIds.length) {
-      const { error: deleteError } = await state.supabase.from('works').delete().in('id', existingIds);
-      if (deleteError) throw deleteError;
-    }
-    const rows = state.works.map(toDbRow);
-    if (rows.length) {
-      const { error: insertError } = await state.supabase.from('works').upsert(rows);
-      if (insertError) throw insertError;
-    }
-  } else {
-    saveLocal();
-  }
+async function persistWorks() {
+  saveLocal();
+  if (state.cloud.user) await pushToCloud(true);
 }
 
 async function upsertWorkFromForm(form) {
   const payload = workFromForm(form);
-  try {
-    if (state.editingId) {
-      const prev = state.works.find(work => work.id === state.editingId);
-      const updated = { ...prev, ...payload, updatedAt: new Date().toISOString() };
-      state.works = state.works.map(work => work.id === state.editingId ? updated : work);
-      await persistWork(updated);
-      state.selectedId = state.editingId;
-    } else {
-      const work = { id: uid(), ...payload, createdAt: new Date().toISOString(), updatedAt: null };
-      state.works.unshift(work);
-      await persistWork(work);
-      state.selectedId = work.id;
-    }
-    if (!isCloudMode()) saveLocal();
-    populateFilters();
-    renderAll();
-    resetFormMode();
-    updateSyncStatus('저장 완료');
-  } catch (error) {
-    console.error(error);
-    alert(`저장 실패: ${error.message}`);
+  if (state.editingId) {
+    state.works = state.works.map(work => work.id === state.editingId
+      ? { ...work, ...payload, updatedAt: new Date().toISOString() }
+      : work);
+    state.selectedId = state.editingId;
+  } else {
+    const work = { id: uid(), ...payload, createdAt: new Date().toISOString(), updatedAt: null };
+    state.works.unshift(work);
+    state.selectedId = work.id;
   }
+  await persistWorks();
+  populateFilters();
+  renderAll();
+  resetFormMode();
 }
 
 async function deleteWork(id) {
@@ -594,19 +453,12 @@ async function deleteWork(id) {
   if (!work) return;
   const ok = confirm(`'${work.title}' 업무를 삭제할까요? 이 작업은 되돌릴 수 없습니다.`);
   if (!ok) return;
-  try {
-    state.works = state.works.filter(w => w.id !== id);
-    await removeWork(id);
-    if (!isCloudMode()) saveLocal();
-    if (state.editingId === id) resetFormMode();
-    if (state.selectedId === id) state.selectedId = state.works[0]?.id || null;
-    populateFilters();
-    renderAll();
-    updateSyncStatus('삭제 완료');
-  } catch (error) {
-    console.error(error);
-    alert(`삭제 실패: ${error.message}`);
-  }
+  state.works = state.works.filter(w => w.id !== id);
+  if (state.editingId === id) resetFormMode();
+  if (state.selectedId === id) state.selectedId = state.works[0]?.id || null;
+  await persistWorks();
+  populateFilters();
+  renderAll();
 }
 
 function exportJson() {
@@ -674,16 +526,14 @@ async function importJson(file) {
   reader.onload = async () => {
     try {
       const parsed = JSON.parse(reader.result);
-      const works = Array.isArray(parsed.works) ? parsed.works.map(normalizeWork) : [];
-      await replaceAllWorks(works);
+      state.works = Array.isArray(parsed.works) ? parsed.works.map(normalizeImportedWork) : [];
       state.selectedId = state.works[0]?.id || null;
       resetFormMode();
+      await persistWorks();
       populateFilters();
       setDefaultMonthPicker();
       renderAll();
-      updateSyncStatus('가져오기 완료');
     } catch (e) {
-      console.error(e);
       alert('JSON 파일을 읽지 못했습니다.');
     }
   };
@@ -692,7 +542,7 @@ async function importJson(file) {
 
 async function seedDemo() {
   if (state.works.length && !confirm('기존 데이터가 있습니다. 데모 데이터로 바꿀까요?')) return;
-  const demo = [
+  state.works = [
     {
       id: uid(), title: '주간 리포트 구조 개선', date: '2026-03-15', project: '성과 보고 체계', category: '분석/리포팅',
       summary: '반복되는 주간 보고서를 재사용 가능한 구조로 정리', role: '기획 및 작성', tools: 'Google Sheets, Markdown', link: '',
@@ -710,76 +560,17 @@ async function seedDemo() {
     {
       id: uid(), title: '업무 자산화 MVP 구현', date: '2026-03-13', project: 'Career Asset OS', category: '개발/MVP',
       summary: '실무를 커리어 문장으로 바꾸는 개인용 웹앱 MVP를 구현', role: '기획 및 구현', tools: 'HTML, CSS, JavaScript', link: '',
-      problem: '업무 경험이 흩어져 있어 이력서나 포트폴리오로 바로 연결되기 어려웠다.', action: '입력-구조화-출력 흐름을 화면으로 설계하고 동기화 가능한 구조로 만들었다.',
+      problem: '업무 경험이 흩어져 있어 이력서나 포트폴리오로 바로 연결되기 어려웠다.', action: '입력-구조화-출력 흐름을 화면으로 설계하고 localStorage 기반 MVP를 만들었다.',
       result: '업무를 기록하는 즉시 커리어 문장으로 변환할 수 있는 기반이 생겼다.', lesson: '작은 MVP라도 실제로 써볼 수 있게 만들면 개선 포인트가 빨리 보인다.',
       skills: ['기획', '프론트엔드', '문제 해결', '구조 설계'], asset: { name: 'Career Asset OS MVP', type: 'document' }, createdAt: new Date().toISOString(), updatedAt: null,
     }
   ];
-  try {
-    await replaceAllWorks(demo);
-    state.selectedId = state.works[0]?.id || null;
-    resetFormMode();
-    populateFilters();
-    setDefaultMonthPicker();
-    renderAll();
-    updateSyncStatus('데모 데이터 반영');
-  } catch (e) {
-    console.error(e);
-    alert(`데모 데이터 반영 실패: ${e.message}`);
-  }
-}
-
-function showApp() {
-  el.authGate.classList.add('hidden');
-  el.appRoot.classList.remove('hidden');
-}
-
-function showGate() {
-  el.authGate.classList.remove('hidden');
-  el.appRoot.classList.add('hidden');
-}
-
-function isUnlocked() {
-  return localStorage.getItem(AUTH_KEY) === 'ok';
-}
-
-function unlock() {
-  localStorage.setItem(AUTH_KEY, 'ok');
-}
-
-function relock() {
-  localStorage.removeItem(AUTH_KEY);
-}
-
-function handleGateSubmit(e) {
-  e.preventDefault();
-  if (el.passwordInput.value === SITE_PASSWORD) {
-    unlock();
-    el.passwordInput.value = '';
-    el.authError.classList.add('hidden');
-    showApp();
-  } else {
-    el.authError.classList.remove('hidden');
-  }
-}
-
-function updateSyncStatus(extra = '') {
-  if (!hasSupabaseConfig()) {
-    el.syncStatus.textContent = '로컬 모드';
-    el.syncStatus.className = 'sync-status local';
-    el.syncNote.textContent = 'Supabase 설정이 없어서 이 브라우저에만 저장됩니다.';
-    return;
-  }
-  if (isCloudMode()) {
-    const email = state.session?.user?.email || '로그인됨';
-    el.syncStatus.textContent = '클라우드 모드';
-    el.syncStatus.className = 'sync-status cloud';
-    el.syncNote.textContent = `${email} 계정으로 Supabase와 동기화 중${extra ? ` · ${extra}` : ''}`;
-    return;
-  }
-  el.syncStatus.textContent = '준비됨 / 로그인 필요';
-  el.syncStatus.className = 'sync-status pending';
-  el.syncNote.textContent = 'Supabase 설정은 되어 있지만 아직 로그인 전이라 로컬에만 저장됩니다.';
+  state.selectedId = state.works[0].id;
+  resetFormMode();
+  await persistWorks();
+  populateFilters();
+  setDefaultMonthPicker();
+  renderAll();
 }
 
 function renderAll() {
@@ -791,28 +582,201 @@ function renderAll() {
   renderDetail();
 }
 
-el.authForm.addEventListener('submit', handleGateSubmit);
-el.form.addEventListener('submit', async (e) => { e.preventDefault(); await upsertWorkFromForm(el.form); });
-el.exportBtn.addEventListener('click', exportJson);
-el.mdExportBtn.addEventListener('click', exportMarkdown);
-el.importInput.addEventListener('change', async (e) => { const file = e.target.files?.[0]; if (file) await importJson(file); });
-el.searchInput.addEventListener('input', renderList);
-el.projectFilter.addEventListener('change', renderList);
-el.skillFilter.addEventListener('change', renderList);
-el.seedBtn.addEventListener('click', seedDemo);
-el.cancelEditBtn.addEventListener('click', resetFormMode);
-el.monthPicker.addEventListener('change', () => { renderStats(); renderMonthlySummary(); });
-el.loginBtn.addEventListener('click', sendMagicLink);
-el.logoutBtn.addEventListener('click', logout);
-
-async function bootstrap() {
-  loadLocal();
-  await initSupabase();
-  await loadWorks();
-  resetFormMode();
-  updateSyncStatus();
-  if (isUnlocked()) showApp();
-  else showGate();
+function setCloudStatus(message, type = '') {
+  el.cloudStatus.textContent = message;
+  el.cloudStatus.classList.remove('ok', 'warn', 'error');
+  if (type) el.cloudStatus.classList.add(type);
 }
 
-bootstrap();
+function cloudReady() {
+  return Boolean(state.cloud.client && state.cloud.user);
+}
+
+function initSupabase() {
+  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+    setCloudStatus('localStorage 모드. app.js에 SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY를 넣으면 클라우드 동기화가 켜집니다.', 'warn');
+    return;
+  }
+  if (!window.supabase || !window.supabase.createClient) {
+    setCloudStatus('Supabase 라이브러리를 불러오지 못했습니다.', 'error');
+    return;
+  }
+
+  state.cloud.client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  });
+  state.cloud.enabled = true;
+  setCloudStatus('Supabase 연결 준비 완료. 이메일로 매직 링크를 보내 로그인하세요.', 'warn');
+}
+
+async function refreshCloudSession() {
+  if (!state.cloud.client) return;
+  const { data, error } = await state.cloud.client.auth.getSession();
+  if (error) {
+    setCloudStatus(`세션 확인 실패: ${error.message}`, 'error');
+    return;
+  }
+  const user = data.session?.user || null;
+  state.cloud.user = user;
+  if (user) {
+    el.syncEmail.value = user.email || '';
+    setCloudStatus(`클라우드 로그인됨: ${user.email}`, 'ok');
+  } else {
+    setCloudStatus('클라우드 미로그인 상태입니다. localStorage 모드로 계속 사용할 수 있습니다.', 'warn');
+  }
+}
+
+async function sendMagicLink() {
+  if (!state.cloud.client) {
+    alert('먼저 app.js에 Supabase URL과 Publishable key를 넣어주세요.');
+    return;
+  }
+  const email = el.syncEmail.value.trim();
+  if (!email) {
+    alert('이메일을 입력해주세요.');
+    return;
+  }
+  const redirectTo = window.location.href.split('#')[0];
+  const { error } = await state.cloud.client.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: redirectTo },
+  });
+  if (error) {
+    setCloudStatus(`매직 링크 발송 실패: ${error.message}`, 'error');
+    alert(error.message);
+    return;
+  }
+  setCloudStatus(`매직 링크를 ${email}로 보냈습니다. 메일에서 링크를 눌러 돌아오세요.`, 'ok');
+}
+
+async function pullFromCloud() {
+  if (!cloudReady()) {
+    alert('클라우드 로그인 후 사용할 수 있습니다.');
+    return;
+  }
+  setCloudStatus('클라우드에서 데이터를 불러오는 중...', 'warn');
+  const { data, error } = await state.cloud.client
+    .from('works')
+    .select('work_id,payload,updated_at')
+    .eq('user_id', state.cloud.user.id)
+    .order('updated_at', { ascending: false });
+
+  if (error) {
+    setCloudStatus(`불러오기 실패: ${error.message}`, 'error');
+    alert(error.message);
+    return;
+  }
+  state.works = (data || []).map(row => normalizeImportedWork({ id: row.work_id, ...row.payload }));
+  state.selectedId = state.works[0]?.id || null;
+  saveLocal();
+  populateFilters();
+  setDefaultMonthPicker();
+  resetFormMode();
+  renderAll();
+  setCloudStatus(`클라우드에서 ${state.works.length}개 업무를 불러왔습니다.`, 'ok');
+}
+
+async function pushToCloud(silent = false) {
+  if (!cloudReady()) return;
+
+  const remoteIdsResult = await state.cloud.client
+    .from('works')
+    .select('work_id')
+    .eq('user_id', state.cloud.user.id);
+
+  if (remoteIdsResult.error) {
+    setCloudStatus(`클라우드 조회 실패: ${remoteIdsResult.error.message}`, 'error');
+    if (!silent) alert(remoteIdsResult.error.message);
+    return;
+  }
+
+  const remoteIds = new Set((remoteIdsResult.data || []).map(row => row.work_id));
+  const localIds = new Set(state.works.map(w => w.id));
+  const idsToDelete = [...remoteIds].filter(id => !localIds.has(id));
+
+  if (idsToDelete.length) {
+    const { error: deleteError } = await state.cloud.client
+      .from('works')
+      .delete()
+      .eq('user_id', state.cloud.user.id)
+      .in('work_id', idsToDelete);
+    if (deleteError) {
+      setCloudStatus(`클라우드 삭제 동기화 실패: ${deleteError.message}`, 'error');
+      if (!silent) alert(deleteError.message);
+      return;
+    }
+  }
+
+  if (state.works.length) {
+    const rows = state.works.map(work => ({
+      user_id: state.cloud.user.id,
+      work_id: work.id,
+      payload: { ...work, id: undefined },
+      updated_at: new Date().toISOString(),
+    }));
+
+    const { error: upsertError } = await state.cloud.client
+      .from('works')
+      .upsert(rows, { onConflict: 'user_id,work_id' });
+
+    if (upsertError) {
+      setCloudStatus(`클라우드 저장 실패: ${upsertError.message}`, 'error');
+      if (!silent) alert(upsertError.message);
+      return;
+    }
+  }
+
+  setCloudStatus(`클라우드에 ${state.works.length}개 업무를 반영했습니다.`, 'ok');
+}
+
+async function signOutCloud() {
+  if (!state.cloud.client) return;
+  await state.cloud.client.auth.signOut();
+  state.cloud.user = null;
+  setCloudStatus('클라우드 로그아웃됨. localStorage 모드로 전환되었습니다.', 'warn');
+}
+
+function bindEvents() {
+  el.form.addEventListener('submit', async (e) => { e.preventDefault(); await upsertWorkFromForm(el.form); });
+  el.exportBtn.addEventListener('click', exportJson);
+  el.mdExportBtn.addEventListener('click', exportMarkdown);
+  el.importInput.addEventListener('change', async (e) => { const file = e.target.files?.[0]; if (file) await importJson(file); });
+  el.searchInput.addEventListener('input', renderList);
+  el.projectFilter.addEventListener('change', renderList);
+  el.skillFilter.addEventListener('change', renderList);
+  el.seedBtn.addEventListener('click', seedDemo);
+  el.cancelEditBtn.addEventListener('click', resetFormMode);
+  el.monthPicker.addEventListener('change', () => { renderStats(); renderMonthlySummary(); });
+  el.authForm.addEventListener('submit', handleAuthSubmit);
+  el.logoutBtn.addEventListener('click', logout);
+  el.sendMagicLinkBtn.addEventListener('click', sendMagicLink);
+  el.syncDownBtn.addEventListener('click', pullFromCloud);
+  el.syncUpBtn.addEventListener('click', () => pushToCloud(false));
+  el.cloudSignOutBtn.addEventListener('click', signOutCloud);
+}
+
+async function init() {
+  loadLocal();
+  populateFilters();
+  setDefaultMonthPicker();
+  state.selectedId = state.works[0]?.id || null;
+  resetFormMode();
+  renderAll();
+  if (isAuthenticated()) showApp(); else showGate();
+
+  initSupabase();
+  if (state.cloud.client) {
+    await refreshCloudSession();
+    state.cloud.client.auth.onAuthStateChange(async (_event, session) => {
+      state.cloud.user = session?.user || null;
+      await refreshCloudSession();
+    });
+  }
+}
+
+bindEvents();
+init();

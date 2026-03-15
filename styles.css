@@ -284,14 +284,27 @@ pre.output {
   padding: 2px 6px;
 }
 
-
-.hidden{display:none !important}
-.button-row{display:flex;gap:8px;flex-wrap:wrap}
-.sync-status{padding:10px 12px;border-radius:12px;font-weight:700;margin-bottom:8px;border:1px solid var(--border)}
-.sync-status.local{background:rgba(255,255,255,.04)}
-.sync-status.pending{background:rgba(255,193,7,.08)}
-.sync-status.cloud{background:rgba(62,207,142,.10)}
-.sync-note{font-size:13px;line-height:1.45;margin-bottom:10px}
-.auth-error{color:#ff8f8f;font-size:13px;margin-top:8px}
-.auth-form{display:flex;gap:8px;flex-direction:column}
-.auth-form input{width:100%}
+.small-copy { font-size: 13px; line-height: 1.45; }
+.sync-status {
+  min-height: 42px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.02);
+  line-height: 1.45;
+}
+.sync-status.ok {
+  color: #c9f0d8;
+  border-color: rgba(139,211,168,0.35);
+  background: rgba(139,211,168,0.08);
+}
+.sync-status.warn {
+  color: #ffd7a6;
+  border-color: rgba(255,196,128,0.35);
+  background: rgba(255,196,128,0.08);
+}
+.sync-status.error {
+  color: #ffc8c8;
+  border-color: rgba(255,123,123,0.35);
+  background: rgba(255,123,123,0.08);
+}

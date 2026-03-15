@@ -11,13 +11,13 @@
     <div class="auth-card">
       <div class="auth-badge">Private Access</div>
       <h1>Career Asset OS</h1>
-      <p class="muted auth-copy">비밀번호를 입력해야 진입할 수 있어. 이 잠금은 가벼운 접근 제한용이고, 실제 데이터 동기화는 Supabase 로그인으로 처리해.</p>
+      <p class="muted auth-copy">비밀번호를 입력해야 진입할 수 있어. 이 비밀번호 게이트는 GitHub Pages용 가벼운 접근 제한용이야.</p>
       <form id="authForm" class="auth-form">
         <input id="passwordInput" type="password" placeholder="비밀번호 입력" autocomplete="current-password" required />
         <button type="submit" class="primary">입장하기</button>
       </form>
       <div id="authError" class="auth-error hidden">비밀번호가 올바르지 않습니다.</div>
-      <div class="muted auth-help">비밀번호는 <code>app.js</code> 상단의 <code>SITE_PASSWORD</code> 값을 바꿔서 설정할 수 있어.</div>
+      <div class="muted auth-help">비밀번호는 <code>app.js</code> 상단의 <code>SITE_PASSWORD</code> 값을 수정해서 바꿀 수 있어.</div>
     </div>
   </div>
 
@@ -27,17 +27,7 @@
       <p class="muted">업무를 자산과 커리어 언어로 바꾸는 개인 OS</p>
 
       <div class="sidebar-block">
-        <h3>동기화</h3>
-        <div id="syncStatus" class="sync-status">로컬 모드</div>
-        <div class="sync-note muted" id="syncNote">Supabase 설정이 없어서 브라우저에만 저장됩니다.</div>
-        <input id="emailInput" type="email" placeholder="Supabase 로그인 이메일" />
-        <div class="button-row">
-          <button id="loginBtn" class="secondary" type="button">매직 링크 보내기</button>
-          <button id="logoutBtn" class="ghost" type="button">로그아웃</button>
-        </div>
-      </div>
-
-      <div class="sidebar-block">
+        <button id="logoutBtn" class="secondary">잠금 / 로그아웃</button>
         <button id="seedBtn" class="secondary">데모 데이터 넣기</button>
         <button id="exportBtn" class="secondary">JSON 내보내기</button>
         <button id="mdExportBtn" class="secondary">Markdown 내보내기</button>
@@ -45,6 +35,17 @@
           JSON 불러오기
           <input id="importInput" type="file" accept="application/json" />
         </label>
+      </div>
+
+      <div class="sidebar-block">
+        <h3>클라우드 동기화</h3>
+        <div class="muted small-copy">Supabase 로그인 후 같은 데이터를 여러 기기에서 쓸 수 있어.</div>
+        <input id="syncEmail" type="email" placeholder="이메일 입력" />
+        <button id="sendMagicLinkBtn" class="secondary">매직 링크 보내기</button>
+        <button id="syncDownBtn" class="secondary">클라우드에서 불러오기</button>
+        <button id="syncUpBtn" class="secondary">현재 데이터 클라우드에 올리기</button>
+        <button id="cloudSignOutBtn" class="ghost">클라우드 로그아웃</button>
+        <div id="cloudStatus" class="sync-status muted">localStorage 모드</div>
       </div>
 
       <div class="sidebar-block">
@@ -63,7 +64,7 @@
         <ol>
           <li>업무 빠르게 기록</li>
           <li>상세에서 구조화</li>
-          <li>자산과 역량 확인</li>
+          <li>클라우드 동기화</li>
           <li>월간 요약/Markdown 출력</li>
         </ol>
       </div>

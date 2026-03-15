@@ -1,51 +1,46 @@
-# Career Asset OS
+# career-asset-os v5 fixed
 
-업무를 자산과 커리어 언어로 바꾸는 개인용 웹앱.
+비밀번호 게이트와 Supabase 동기화가 함께 들어간 통합판입니다.
 
-## 이번 버전(v5)
-- 기존 UI 유지
-- 브라우저 `localStorage` 저장 유지
-- **Supabase 동기화 모드 추가**
-- 이메일 매직 링크 로그인 추가
-- 한 기기에서 입력한 데이터를 다른 기기에서도 같은 계정으로 사용 가능
+## 이번 버전에서 되는 것
+- 비밀번호 입력 후 진입
+- 업무 등록 / 수정 / 삭제
+- 문제 / 행동 / 결과 / 배운 점 구조화
+- 역량 태그, 자산, Skill Map, 월간 요약
+- JSON / Markdown export
+- localStorage 저장
+- Supabase 이메일 매직 링크 로그인
+- 클라우드에서 불러오기 / 클라우드에 올리기
 
-## 파일
-- `index.html`
-- `styles.css`
-- `app.js`
-- `supabase_schema.sql`
-
-## 빠른 실행
-로컬 테스트:
-1. 파일을 열거나 간단한 정적 서버로 실행
-2. `app.js`의 `SITE_PASSWORD` 변경
-3. 그냥 쓰면 로컬 모드
-4. Supabase를 붙이려면 아래 설정 진행
-
-## Supabase 연결 순서
-1. Supabase에서 새 프로젝트 생성
-2. SQL Editor에서 `supabase_schema.sql` 실행
-3. Authentication > URL Configuration 에서 Site URL을 GitHub Pages 주소로 설정
-4. `app.js` 상단의 값 채우기
+## 꼭 먼저 바꿔야 하는 값
+`app.js` 상단의 아래 3개를 수정하세요.
 
 ```js
-const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
-const SUPABASE_ANON_KEY = 'YOUR_PUBLISHABLE_OR_ANON_KEY';
+const SITE_PASSWORD = 'change-this-password';
+const SUPABASE_URL = '';
+const SUPABASE_PUBLISHABLE_KEY = '';
 ```
 
-5. 배포 후 앱 좌측의 이메일 칸에 로그인 이메일 입력
-6. "매직 링크 보내기" 클릭
-7. 메일의 링크를 눌러 다시 앱으로 돌아오면 클라우드 모드 전환
+- `SITE_PASSWORD`: 접속용 비밀번호
+- `SUPABASE_URL`: Supabase Project URL
+- `SUPABASE_PUBLISHABLE_KEY`: Supabase Publishable key
+
+## Supabase 준비 순서
+1. Supabase 프로젝트 생성
+2. SQL Editor에서 `supabase_schema.sql` 실행
+3. Authentication > URL Configuration에서 GitHub Pages 주소 등록
+4. `app.js`에 URL / key 입력
+5. GitHub에 push
+6. 배포 페이지에서 이메일 입력 후 매직 링크 로그인
+
+## 동기화 방식
+- 로그인 안 하면 localStorage에만 저장
+- 로그인하면
+  - `클라우드에서 불러오기`: DB → 현재 브라우저
+  - `현재 데이터 클라우드에 올리기`: 현재 브라우저 → DB
+- 업무 저장/삭제/불러오기를 한 뒤 로그인 상태면 자동으로 클라우드에도 반영 시도
 
 ## 중요한 점
-- `SITE_PASSWORD`는 가벼운 잠금 장치일 뿐이야.
-- 실제 데이터 보호는 Supabase 로그인 + RLS 정책이 담당해.
-- `SUPABASE_ANON_KEY` 또는 publishable key는 브라우저에 넣어도 되지만, `service_role` 키는 절대 넣으면 안 돼.
-
-## 현재 저장 구조
-- 로그인 안 함 → localStorage
-- Supabase 로그인 완료 → `public.works` 테이블
-
-## 마이그레이션
-기존 localStorage 데이터를 JSON 내보내기 한 다음,
-Supabase 로그인 상태에서 JSON 불러오기를 하면 클라우드로 옮길 수 있어.
+- 비밀번호 게이트는 정적 사이트용 간단한 접근 제한일 뿐입니다.
+- 실제 데이터 보안은 Supabase Auth + RLS 정책이 담당합니다.
+- `service_role` / secret key는 절대 브라우저 코드에 넣지 마세요.
