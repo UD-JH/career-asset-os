@@ -140,14 +140,28 @@ function showGate() {
   el.authError?.classList.add('hidden');
 }
 
+function normalizePassword(value) {
+  return String(value || '')
+    .normalize('NFC')
+    .replace(/\r?\n/g, '')
+    .trim();
+}
+
 function handleAuthSubmit(e) {
   e.preventDefault();
-  const password = el.passwordInput?.value ?? '';
-  if (password === SITE_PASSWORD) {
+
+  const entered = normalizePassword(el.passwordInput?.value);
+  const expected = normalizePassword(SITE_PASSWORD);
+
+  console.log('entered:', entered, entered.length);
+  console.log('expected:', expected, expected.length);
+
+  if (entered === expected) {
     localStorage.setItem(AUTH_KEY, '1');
     showApp();
     return;
   }
+
   el.authError?.classList.remove('hidden');
 }
 
