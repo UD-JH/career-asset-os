@@ -17,9 +17,12 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 .app {
-  display: grid;
+  display: none; /* 기본 숨김 */
   grid-template-columns: 290px 1fr;
   min-height: 100vh;
+}
+.app.visible {
+  display: grid; /* visible 클래스일 때만 표시 */
 }
 .sidebar {
   padding: 24px;
@@ -146,7 +149,7 @@ button.danger {
   font-size: 13px;
 }
 .asset-tag { background: rgba(139,211,168,0.14); color: #c9f0d8; }
-.hidden { display: none; }
+.hidden { display: none !important; }
 .detail-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -229,7 +232,6 @@ pre.output {
   .app { grid-template-columns: 1fr; }
   .grid-form, .asset-row, .skill-row { grid-template-columns: 1fr; }
 }
-
 
 .auth-gate {
   min-height: 100vh;
