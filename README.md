@@ -1,43 +1,51 @@
-# Career Asset OS MVP v3
+# Career Asset OS
 
-업무를 기록하고, 구조화하고, 자산으로 남기고, 커리어 문장으로 변환하는 개인용 웹앱입니다.
+업무를 자산과 커리어 언어로 바꾸는 개인용 웹앱.
 
-## 이번 버전에서 되는 것
-- 업무 등록 / 수정 / 삭제
-- 문제 / 행동 / 결과 / 배운 점 구조화
-- 역량 태그 입력
-- 자산 이름 / 유형 입력
-- 이력서 bullet 생성
-- 포트폴리오 문단 생성
-- 면접 STAR 생성
-- Skill Map 시각화
-- 프로젝트 필터 / 역량 필터 / 검색
-- Asset Library 전용 화면
-- 월간 요약 자동 생성
-- Markdown export
-- localStorage 저장
-- JSON 내보내기 / 불러오기
-- 데모 데이터 넣기
+## 이번 버전(v5)
+- 기존 UI 유지
+- 브라우저 `localStorage` 저장 유지
+- **Supabase 동기화 모드 추가**
+- 이메일 매직 링크 로그인 추가
+- 한 기기에서 입력한 데이터를 다른 기기에서도 같은 계정으로 사용 가능
 
-## 실행 방법
-1. 파일을 같은 폴더에 둡니다.
-2. `index.html`을 브라우저로 엽니다.
-3. 필요하면 GitHub 저장소에 올린 뒤 GitHub Pages로 배포합니다.
+## 파일
+- `index.html`
+- `styles.css`
+- `app.js`
+- `supabase_schema.sql`
 
-## 추천 다음 단계
-- 상세 문장 템플릿 커스터마이징
-- 태그 클릭 기반 빠른 필터링
-- 자산 재사용 횟수 기록
-- Supabase 연동으로 여러 기기 동기화
-- 직무별 이력서 버전 생성
+## 빠른 실행
+로컬 테스트:
+1. 파일을 열거나 간단한 정적 서버로 실행
+2. `app.js`의 `SITE_PASSWORD` 변경
+3. 그냥 쓰면 로컬 모드
+4. Supabase를 붙이려면 아래 설정 진행
 
+## Supabase 연결 순서
+1. Supabase에서 새 프로젝트 생성
+2. SQL Editor에서 `supabase_schema.sql` 실행
+3. Authentication > URL Configuration 에서 Site URL을 GitHub Pages 주소로 설정
+4. `app.js` 상단의 값 채우기
 
-## 비밀번호 진입 기능
-- 접속 시 먼저 비밀번호를 입력해야 앱 본문에 들어갈 수 있습니다.
-- 비밀번호는 `app.js` 상단의 `SITE_PASSWORD` 값을 수정해서 설정하세요.
-- 인증 상태는 `sessionStorage`에만 저장되므로, 브라우저 탭을 닫거나 로그아웃하면 다시 입력해야 합니다.
+```js
+const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
+const SUPABASE_ANON_KEY = 'YOUR_PUBLISHABLE_OR_ANON_KEY';
+```
 
-### 중요한 제한
-이 방식은 GitHub Pages 같은 정적 사이트에서 쓰는 **가벼운 접근 제한**입니다.
-코드 안에 비밀번호가 포함되므로, 민감한 정보 보호용 **실제 보안 수단은 아닙니다**.
-진짜 비공개가 필요하면 인증이 있는 서버/Vercel+Supabase 같은 방식으로 가야 합니다.
+5. 배포 후 앱 좌측의 이메일 칸에 로그인 이메일 입력
+6. "매직 링크 보내기" 클릭
+7. 메일의 링크를 눌러 다시 앱으로 돌아오면 클라우드 모드 전환
+
+## 중요한 점
+- `SITE_PASSWORD`는 가벼운 잠금 장치일 뿐이야.
+- 실제 데이터 보호는 Supabase 로그인 + RLS 정책이 담당해.
+- `SUPABASE_ANON_KEY` 또는 publishable key는 브라우저에 넣어도 되지만, `service_role` 키는 절대 넣으면 안 돼.
+
+## 현재 저장 구조
+- 로그인 안 함 → localStorage
+- Supabase 로그인 완료 → `public.works` 테이블
+
+## 마이그레이션
+기존 localStorage 데이터를 JSON 내보내기 한 다음,
+Supabase 로그인 상태에서 JSON 불러오기를 하면 클라우드로 옮길 수 있어.

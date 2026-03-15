@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Career Asset OS MVP v3</title>
+  <title>Career Asset OS</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -11,7 +11,7 @@
     <div class="auth-card">
       <div class="auth-badge">Private Access</div>
       <h1>Career Asset OS</h1>
-      <p class="muted auth-copy">비밀번호를 입력해야 진입할 수 있어. GitHub Pages용 정적 사이트 특성상 완전한 보안은 아니고, 가벼운 접근 제한용이야.</p>
+      <p class="muted auth-copy">비밀번호를 입력해야 진입할 수 있어. 이 잠금은 가벼운 접근 제한용이고, 실제 데이터 동기화는 Supabase 로그인으로 처리해.</p>
       <form id="authForm" class="auth-form">
         <input id="passwordInput" type="password" placeholder="비밀번호 입력" autocomplete="current-password" required />
         <button type="submit" class="primary">입장하기</button>
@@ -27,7 +27,17 @@
       <p class="muted">업무를 자산과 커리어 언어로 바꾸는 개인 OS</p>
 
       <div class="sidebar-block">
-        <button id="logoutBtn" class="secondary">잠금 / 로그아웃</button>
+        <h3>동기화</h3>
+        <div id="syncStatus" class="sync-status">로컬 모드</div>
+        <div class="sync-note muted" id="syncNote">Supabase 설정이 없어서 브라우저에만 저장됩니다.</div>
+        <input id="emailInput" type="email" placeholder="Supabase 로그인 이메일" />
+        <div class="button-row">
+          <button id="loginBtn" class="secondary" type="button">매직 링크 보내기</button>
+          <button id="logoutBtn" class="ghost" type="button">로그아웃</button>
+        </div>
+      </div>
+
+      <div class="sidebar-block">
         <button id="seedBtn" class="secondary">데모 데이터 넣기</button>
         <button id="exportBtn" class="secondary">JSON 내보내기</button>
         <button id="mdExportBtn" class="secondary">Markdown 내보내기</button>
@@ -157,6 +167,8 @@
       </section>
     </main>
   </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>
 </body>
 </html>

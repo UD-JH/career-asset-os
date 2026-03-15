@@ -283,3 +283,15 @@ pre.output {
   border-radius: 8px;
   padding: 2px 6px;
 }
+
+
+.hidden{display:none !important}
+.button-row{display:flex;gap:8px;flex-wrap:wrap}
+.sync-status{padding:10px 12px;border-radius:12px;font-weight:700;margin-bottom:8px;border:1px solid var(--border)}
+.sync-status.local{background:rgba(255,255,255,.04)}
+.sync-status.pending{background:rgba(255,193,7,.08)}
+.sync-status.cloud{background:rgba(62,207,142,.10)}
+.sync-note{font-size:13px;line-height:1.45;margin-bottom:10px}
+.auth-error{color:#ff8f8f;font-size:13px;margin-top:8px}
+.auth-form{display:flex;gap:8px;flex-direction:column}
+.auth-form input{width:100%}
