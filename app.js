@@ -5,11 +5,11 @@ const AI_KEY_STORAGE = 'career-os-anthropic-key';
 const CONFIG_KEY = 'career-os-config';
 // 민감 정보(비밀번호·Supabase 키)는 소스에 없음 — 설정 탭 UI에서 입력 후 localStorage에 보관
 
-const state = { works: [], selectedId: null, editingId: null, cloud: { enabled: false, client: null, user: null } };
+const state = { works: [], selectedId: null, editingId: null, jobs: [], selectedJobId: null, editingJobId: null, cloud: { enabled: false, client: null, user: null } };
 const el = {};
 
 function cacheDom() {
-  ['setupGate','setupForm','setupPassword','setupPasswordConfirm','setupError','authGate','appRoot','authForm','passwordInput','authError','logoutBtn','workForm','workList','detailView','detailEmpty','totalWorks','totalAssets','topSkill','monthlyWorkCount','exportBtn','mdExportBtn','importInput','searchInput','projectFilter','skillFilter','listSummary','seedBtn','formTitle','formModeHint','cancelEditBtn','submitBtn','skillMap','skillSummary','assetLibrary','assetSummary','monthPicker','monthlySummary','syncEmail','sendMagicLinkBtn','syncDownBtn','syncUpBtn','cloudSignOutBtn','cloudStatus','tabNav','cloudBadge','rawInput','aiRefineBtn','aiStatus','apiKeyInput','saveApiKeyBtn','apiKeyStatus','currentPwInput','newPwInput','confirmPwInput','changePwBtn','pwChangeStatus','supabaseUrlInput','supabaseKeyInput','saveSupabaseBtn','supabaseConfigStatus'].forEach(id => { el[id] = document.getElementById(id); });
+  ['setupGate','setupForm','setupPassword','setupPasswordConfirm','setupError','authGate','appRoot','authForm','passwordInput','authError','logoutBtn','workForm','workList','detailView','detailEmpty','totalWorks','totalAssets','topSkill','monthlyWorkCount','exportBtn','mdExportBtn','importInput','searchInput','projectFilter','skillFilter','listSummary','seedBtn','formTitle','formModeHint','cancelEditBtn','submitBtn','skillMap','skillSummary','assetLibrary','assetSummary','monthPicker','monthlySummary','syncEmail','sendMagicLinkBtn','syncDownBtn','syncUpBtn','cloudSignOutBtn','cloudStatus','tabNav','cloudBadge','rawInput','aiRefineBtn','aiStatus','apiKeyInput','saveApiKeyBtn','apiKeyStatus','currentPwInput','newPwInput','confirmPwInput','changePwBtn','pwChangeStatus','supabaseUrlInput','supabaseKeyInput','saveSupabaseBtn','supabaseConfigStatus','addJobBtn','cancelJobBtn','jobForm','jobSubmitBtn','jobFormWrap','jobList','jobDetailEmpty','jobDetailView','jobStatusFilter','jobSearchInput'].forEach(id => { el[id] = document.getElementById(id); });
   el.form = el.workForm;
 }
 
@@ -54,11 +54,23 @@ function normalizeWork(w) {
   return { id: w.id || uid(), title: w.title || '', date: w.date || '', project: w.project || '', category: w.category || '', summary: w.summary || '', role: w.role || '', tools: w.tools || '', link: w.link || '', problem: w.problem || '', action: w.action || '', result: w.result || '', lesson: w.lesson || '', skills: Array.isArray(w.skills) ? w.skills : [], asset: w.asset && w.asset.name ? { name: w.asset.name, type: w.asset.type || '' } : null, aiResume: w.aiResume || '', aiStar: w.aiStar || '', aiPortfolio: w.aiPortfolio || '', createdAt: w.createdAt || new Date().toISOString(), updatedAt: w.updatedAt || null };
 }
 
-function saveLocal() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ works: state.works })); } catch(e) { console.warn(e); } }
+const JOB_STATUS = {
+  interested: { label: '관심', cls: 'status-interested' },
+  applied:    { label: '지원', cls: 'status-applied' },
+  passed:     { label: '서류합격', cls: 'status-passed' },
+  failed:     { label: '불합격', cls: 'status-failed' },
+  offer:      { label: '최종합격', cls: 'status-offer' }
+};
+
+function normalizeJob(j) {
+  return { id: j.id || uid(), company: j.company || '', role: j.role || '', url: j.url || '', deadline: j.deadline || '', status: j.status || 'interested', requiredSkills: Array.isArray(j.requiredSkills) ? j.requiredSkills : [], description: j.description || '', memo: j.memo || '', createdAt: j.createdAt || new Date().toISOString(), updatedAt: j.updatedAt || null };
+}
+
+function saveLocal() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ works: state.works, jobs: state.jobs })); } catch(e) { console.warn(e); } }
 function loadLocal() {
   const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('career-asset-os-data-v4') || localStorage.getItem('career-asset-os-data-v3');
   if (!raw) return;
-  try { const p = JSON.parse(raw); state.works = Array.isArray(p.works) ? p.works.map(normalizeWork) : []; } catch(e) { console.error(e); }
+  try { const p = JSON.parse(raw); state.works = Array.isArray(p.works) ? p.works.map(normalizeWork) : []; state.jobs = Array.isArray(p.jobs) ? p.jobs.map(normalizeJob) : []; } catch(e) { console.error(e); }
 }
 
 /* ── Config ── */
@@ -218,7 +230,7 @@ function renderDetail() {
   el.detailView.querySelector('[data-action="delete"]')?.addEventListener('click', () => deleteWork(work.id));
 }
 
-function renderAll() { renderStats(); renderSkillMap(); renderList(); renderAssets(); renderMonthlySummary(); renderDetail(); }
+function renderAll() { renderStats(); renderSkillMap(); renderList(); renderAssets(); renderMonthlySummary(); renderDetail(); renderJobList(); renderJobDetail(); }
 
 function workFromForm(form) {
   const d = new FormData(form), an = (d.get('assetName') || '').trim(), at = (d.get('assetType') || '').trim();
@@ -465,6 +477,199 @@ JSON 형식만 반환하고 다른 텍스트는 절대 포함하지 마세요.
   }
 }
 
+/* ══════════════════════════════════════
+   공고 관리
+══════════════════════════════════════ */
+function getJobMatchScore(job) {
+  const required = (job.requiredSkills || []).map(s => s.toLowerCase());
+  if (!required.length) return 0;
+  const mySkills = new Set(state.works.flatMap(w => w.skills || []).map(s => s.toLowerCase()));
+  const matched = required.filter(s => mySkills.has(s)).length;
+  return Math.round((matched / required.length) * 100);
+}
+
+function getMatchedWorks(job) {
+  const required = new Set((job.requiredSkills || []).map(s => s.toLowerCase()));
+  if (!required.size) return [];
+  return [...state.works]
+    .map(w => ({ w, cnt: (w.skills || []).filter(s => required.has(s.toLowerCase())).length }))
+    .filter(({ cnt }) => cnt > 0)
+    .sort((a, b) => b.cnt - a.cnt)
+    .map(({ w }) => w);
+}
+
+function jobFromForm(form) {
+  const d = new FormData(form);
+  return { company: (d.get('company') || '').trim(), role: (d.get('role') || '').trim(), url: (d.get('url') || '').trim(), deadline: d.get('deadline') || '', status: d.get('status') || 'interested', requiredSkills: parseSkills(d.get('requiredSkills') || ''), description: (d.get('description') || '').trim(), memo: (d.get('memo') || '').trim() };
+}
+
+function showJobForm(editing = false) {
+  el.jobFormWrap.classList.remove('hidden');
+  el.jobSubmitBtn.textContent = editing ? '수정 저장' : '저장';
+  el.jobFormWrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function hideJobForm() {
+  el.jobFormWrap.classList.add('hidden');
+  el.jobForm.reset();
+  state.editingJobId = null;
+  el.jobSubmitBtn.textContent = '저장';
+}
+
+function startEditJob(id) {
+  const j = state.jobs.find(x => x.id === id); if (!j) return;
+  state.editingJobId = id;
+  const f = el.jobForm;
+  f.company.value = j.company; f.role.value = j.role; f.url.value = j.url;
+  f.deadline.value = j.deadline; f.status.value = j.status;
+  f.requiredSkills.value = (j.requiredSkills || []).join(', ');
+  f.description.value = j.description; f.memo.value = j.memo;
+  showJobForm(true);
+}
+
+async function upsertJobFromForm(form) {
+  const payload = jobFromForm(form);
+  if (state.editingJobId) {
+    state.jobs = state.jobs.map(j => j.id === state.editingJobId ? { ...j, ...payload, updatedAt: new Date().toISOString() } : j);
+    state.selectedJobId = state.editingJobId;
+  } else {
+    const j = { id: uid(), ...payload, createdAt: new Date().toISOString(), updatedAt: null };
+    state.jobs.unshift(j);
+    state.selectedJobId = j.id;
+  }
+  await persistWorks(); hideJobForm(); renderJobList(); renderJobDetail();
+}
+
+async function deleteJob(id) {
+  const j = state.jobs.find(x => x.id === id);
+  if (!j || !confirm(`'${j.company} - ${j.role}' 삭제할까요?`)) return;
+  state.jobs = state.jobs.filter(x => x.id !== id);
+  if (state.selectedJobId === id) state.selectedJobId = state.jobs[0]?.id || null;
+  await persistWorks(); renderJobList(); renderJobDetail();
+}
+
+function getFilteredJobs() {
+  const status = el.jobStatusFilter?.value || '';
+  const q = (el.jobSearchInput?.value || '').trim().toLowerCase();
+  return [...state.jobs]
+    .sort((a, b) => (a.deadline || 'z').localeCompare(b.deadline || 'z'))
+    .filter(j => {
+      if (status && j.status !== status) return false;
+      if (q && ![j.company, j.role, ...(j.requiredSkills || [])].join(' ').toLowerCase().includes(q)) return false;
+      return true;
+    });
+}
+
+function renderJobList() {
+  const items = getFilteredJobs();
+  if (!items.length) { el.jobList.innerHTML = '<div class="empty-state">저장된 공고가 없습니다. 공고를 추가해보세요.</div>'; return; }
+  el.jobList.innerHTML = items.map(j => {
+    const score = getJobMatchScore(j);
+    const st = JOB_STATUS[j.status] || JOB_STATUS.interested;
+    const overdue = j.deadline && j.deadline < new Date().toISOString().slice(0, 10);
+    return `<div class="job-card${j.id === state.selectedJobId ? ' active' : ''}" data-id="${j.id}">
+      <div class="job-card-top">
+        <div>
+          <div class="job-card-company">${escapeHtml(j.company)}</div>
+          <div class="job-card-role">${escapeHtml(j.role)}</div>
+        </div>
+        <span class="job-status-badge ${st.cls}">${st.label}</span>
+      </div>
+      <div class="job-card-meta">
+        ${j.deadline ? `<span class="${overdue ? 'overdue' : ''}">마감 ${escapeHtml(j.deadline)}</span>` : ''}
+        ${j.url ? `<a href="${escapeHtml(j.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">공고 링크 ↗</a>` : ''}
+      </div>
+      <div class="job-match-bar-wrap">
+        <div class="job-match-bar"><div class="job-match-fill" style="width:${score}%"></div></div>
+        <span class="job-match-pct">${score}%</span>
+      </div>
+      <div class="tag-list">${(j.requiredSkills || []).slice(0, 5).map(s => `<span class="tag">${escapeHtml(s)}</span>`).join('')}</div>
+    </div>`;
+  }).join('');
+  el.jobList.querySelectorAll('.job-card').forEach(node => {
+    node.addEventListener('click', () => { state.selectedJobId = node.dataset.id; renderJobList(); renderJobDetail(); });
+  });
+}
+
+function renderJobDetail() {
+  const job = state.jobs.find(j => j.id === state.selectedJobId);
+  if (!job) { el.jobDetailEmpty.style.display = ''; el.jobDetailView.innerHTML = ''; return; }
+  el.jobDetailEmpty.style.display = 'none';
+
+  const score = getJobMatchScore(job);
+  const matchedWorks = getMatchedWorks(job);
+  const mySkills = new Set(state.works.flatMap(w => w.skills || []).map(s => s.toLowerCase()));
+  const st = JOB_STATUS[job.status] || JOB_STATUS.interested;
+
+  const skillRows = (job.requiredSkills || []).map(s => {
+    const has = mySkills.has(s.toLowerCase());
+    return `<div class="skill-match-row">
+      <span class="skill-match-name">${escapeHtml(s)}</span>
+      <span class="skill-match-icon ${has ? 'has' : 'missing'}">${has ? '✓ 보유' : '✗ 부족'}</span>
+    </div>`;
+  }).join('');
+
+  const bulletPackage = matchedWorks.map(w => {
+    const out = buildOutputs(w);
+    return (w.aiResume || out.resume);
+  }).join('\n');
+
+  const worksHtml = matchedWorks.slice(0, 5).map(w => {
+    const out = buildOutputs(w);
+    const overlap = (w.skills || []).filter(s => (job.requiredSkills || []).map(x => x.toLowerCase()).includes(s.toLowerCase()));
+    return `<div class="matched-work-item">
+      <div class="matched-work-title">${escapeHtml(w.title)}</div>
+      <div class="meta">${escapeHtml(w.date || '')} · ${escapeHtml(w.project || '-')}</div>
+      <div class="tag-list">${overlap.map(s => `<span class="tag tag-accent">${escapeHtml(s)}</span>`).join('')}</div>
+      <pre class="output" style="margin-top:8px;font-size:12px">${escapeHtml(w.aiResume || out.resume)}</pre>
+    </div>`;
+  }).join('');
+
+  el.jobDetailView.innerHTML = `
+    <div class="job-detail-card">
+      <div class="job-detail-header">
+        <div>
+          <h3 class="job-detail-company">${escapeHtml(job.company)}</h3>
+          <div class="job-detail-role">${escapeHtml(job.role)}</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <span class="job-status-badge ${st.cls}">${st.label}</span>
+          <button class="btn btn-ghost btn-sm" data-action="edit">수정</button>
+          <button class="btn btn-danger btn-sm" data-action="delete">삭제</button>
+        </div>
+      </div>
+      ${job.description ? `<div class="job-detail-section"><strong>공고 내용</strong><p>${nl2br(job.description)}</p></div>` : ''}
+      ${job.memo ? `<div class="job-detail-section"><strong>메모</strong><p>${nl2br(job.memo)}</p></div>` : ''}
+    </div>
+
+    <div class="job-detail-card">
+      <div class="job-detail-section-title">역량 매칭 <span class="match-score-badge">${score}%</span></div>
+      ${skillRows || '<p class="meta">요구 역량 태그를 추가하면 매칭 결과가 표시됩니다.</p>'}
+    </div>
+
+    <div class="job-detail-card">
+      <div class="job-detail-section-title">관련 업무 경험 <span class="meta">${matchedWorks.length}건 매칭</span></div>
+      ${worksHtml || '<p class="meta">매칭되는 업무 경험이 없습니다. 업무에 역량 태그를 추가해보세요.</p>'}
+    </div>
+
+    ${bulletPackage ? `<div class="job-detail-card">
+      <div class="job-detail-section-title" style="display:flex;justify-content:space-between;align-items:center">
+        이력서 Bullet 패키지
+        <button id="copyBulletBtn" class="btn btn-outline btn-sm">복사</button>
+      </div>
+      <pre class="output" id="bulletPackageText">${escapeHtml(bulletPackage)}</pre>
+    </div>` : ''}
+  `;
+
+  el.jobDetailView.querySelector('[data-action="edit"]')?.addEventListener('click', () => { startEditJob(job.id); switchTab('jobs'); });
+  el.jobDetailView.querySelector('[data-action="delete"]')?.addEventListener('click', () => deleteJob(job.id));
+  el.jobDetailView.querySelector('#copyBulletBtn')?.addEventListener('click', () => {
+    navigator.clipboard.writeText(bulletPackage).then(() => {
+      const btn = el.jobDetailView.querySelector('#copyBulletBtn');
+      btn.textContent = '복사됨 ✓'; setTimeout(() => { btn.textContent = '복사'; }, 2000);
+    });
+  });
+}
+
 function bindEvents() {
   el.tabNav.addEventListener('click', async (e) => {
     const b = e.target.closest('.tab-btn');
@@ -490,6 +695,11 @@ function bindEvents() {
   el.logoutBtn.addEventListener('click', logout);
   if (el.changePwBtn) el.changePwBtn.addEventListener('click', changePassword);
   if (el.saveSupabaseBtn) el.saveSupabaseBtn.addEventListener('click', saveSupabaseConfig);
+  if (el.addJobBtn) el.addJobBtn.addEventListener('click', () => { state.editingJobId = null; el.jobForm?.reset(); showJobForm(false); });
+  if (el.cancelJobBtn) el.cancelJobBtn.addEventListener('click', hideJobForm);
+  if (el.jobForm) el.jobForm.addEventListener('submit', async (e) => { e.preventDefault(); await upsertJobFromForm(el.jobForm); });
+  if (el.jobStatusFilter) el.jobStatusFilter.addEventListener('change', renderJobList);
+  if (el.jobSearchInput) el.jobSearchInput.addEventListener('input', debounce(renderJobList, 200));
   if (el.aiRefineBtn) el.aiRefineBtn.addEventListener('click', refineWithAI);
   if (el.saveApiKeyBtn) el.saveApiKeyBtn.addEventListener('click', saveApiKey);
   el.sendMagicLinkBtn.addEventListener('click', sendMagicLink);

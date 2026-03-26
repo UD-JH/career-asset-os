@@ -53,6 +53,7 @@
         <button class="tab-btn" data-tab="record">기록하기</button>
         <button class="tab-btn" data-tab="works">업무 목록</button>
         <button class="tab-btn" data-tab="detail">상세 보기</button>
+        <button class="tab-btn" data-tab="jobs">공고</button>
         <button class="tab-btn" data-tab="settings">설정</button>
       </nav>
       <div class="topbar-right">
@@ -170,6 +171,71 @@
       </div>
       <div id="detailEmpty" class="empty-state">업무 목록에서 항목을 선택하면 여기에 표시됩니다.</div>
       <div id="detailView"></div>
+    </main>
+
+    <!-- Tab: Jobs -->
+    <main class="tab-content" data-tab="jobs">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">공고 관리</h2>
+          <p class="page-desc">목표 직무와 내 경험을 연결합니다.</p>
+        </div>
+        <button id="addJobBtn" class="btn btn-primary">+ 공고 추가</button>
+      </div>
+
+      <!-- 공고 추가/수정 폼 -->
+      <div id="jobFormWrap" class="job-form-wrap hidden">
+        <form id="jobForm" class="job-form">
+          <div class="form-row">
+            <div class="form-group"><label>회사명</label><input name="company" placeholder="예: 카카오" required /></div>
+            <div class="form-group"><label>직무</label><input name="role" placeholder="예: 데이터 분석가" required /></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>공고 URL</label><input name="url" placeholder="https://..." /></div>
+            <div class="form-group"><label>마감일</label><input name="deadline" type="date" /></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>지원 상태</label>
+              <select name="status">
+                <option value="interested">관심</option>
+                <option value="applied">지원</option>
+                <option value="passed">서류합격</option>
+                <option value="failed">불합격</option>
+                <option value="offer">최종합격</option>
+              </select>
+            </div>
+            <div class="form-group"><label>요구 역량 태그</label><input name="requiredSkills" placeholder="쉼표로 구분 — 예: SQL, 데이터분석, 기획" /></div>
+          </div>
+          <div class="form-group"><label>공고 주요 내용</label><textarea name="description" placeholder="채용 공고의 주요 요구사항이나 직무 설명"></textarea></div>
+          <div class="form-group"><label>개인 메모</label><textarea name="memo" placeholder="이 공고에 대한 생각, 준비사항 등"></textarea></div>
+          <div class="form-footer" style="justify-content:space-between">
+            <button type="button" id="cancelJobBtn" class="btn btn-ghost">취소</button>
+            <button type="submit" class="btn btn-primary" id="jobSubmitBtn">저장</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 필터 -->
+      <div class="filter-bar">
+        <select id="jobStatusFilter" class="filter-select">
+          <option value="">전체 상태</option>
+          <option value="interested">관심</option>
+          <option value="applied">지원</option>
+          <option value="passed">서류합격</option>
+          <option value="failed">불합격</option>
+          <option value="offer">최종합격</option>
+        </select>
+        <input id="jobSearchInput" placeholder="회사명·직무 검색..." class="filter-input" />
+      </div>
+
+      <!-- 공고 목록 + 상세 -->
+      <div class="job-layout">
+        <div id="jobList" class="job-list"></div>
+        <div class="job-detail-panel">
+          <div id="jobDetailEmpty" class="empty-state">공고를 선택하면 역량 매칭 결과가 표시됩니다.</div>
+          <div id="jobDetailView"></div>
+        </div>
+      </div>
     </main>
 
     <!-- Tab: Settings -->
