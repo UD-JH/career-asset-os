@@ -265,7 +265,9 @@ function saveSupabaseConfig() {
   const key = (el.supabaseKeyInput?.value || '').trim();
   if (!url || !key) { alert('URL과 anon key 모두 입력해주세요.'); return; }
   saveConfig({ supabaseUrl: url, supabaseKey: key });
-  if (el.supabaseConfigStatus) { el.supabaseConfigStatus.textContent = '저장됨. 페이지를 새로고침하면 적용됩니다.'; el.supabaseConfigStatus.className = 'cloud-status ok'; }
+  if (el.supabaseConfigStatus) { el.supabaseConfigStatus.textContent = '저장됨. 연결 중...'; el.supabaseConfigStatus.className = 'cloud-status ok'; }
+  state.cloud.client = null; state.cloud.user = null;
+  initSupabase();
 }
 
 function initSupabaseConfigUi() {
