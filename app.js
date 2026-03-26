@@ -9,7 +9,7 @@ const state = { works: [], selectedId: null, editingId: null, jobs: [], selected
 const el = {};
 
 function cacheDom() {
-  ['setupGate','setupForm','setupPassword','setupPasswordConfirm','setupError','authGate','appRoot','authForm','passwordInput','authError','logoutBtn','workForm','workList','detailView','detailEmpty','totalWorks','totalAssets','topSkill','monthlyWorkCount','exportBtn','mdExportBtn','importInput','searchInput','projectFilter','skillFilter','listSummary','seedBtn','formTitle','formModeHint','cancelEditBtn','submitBtn','skillMap','skillSummary','assetLibrary','assetSummary','monthPicker','monthlySummary','syncEmail','sendMagicLinkBtn','syncDownBtn','syncUpBtn','cloudSignOutBtn','cloudStatus','tabNav','cloudBadge','rawInput','aiRefineBtn','aiStatus','apiKeyInput','saveApiKeyBtn','apiKeyStatus','currentPwInput','newPwInput','confirmPwInput','changePwBtn','pwChangeStatus','supabaseUrlInput','supabaseKeyInput','saveSupabaseBtn','supabaseConfigStatus','addJobBtn','cancelJobBtn','jobForm','jobSubmitBtn','jobFormWrap','jobList','jobDetailEmpty','jobDetailView','jobStatusFilter','jobSearchInput'].forEach(id => { el[id] = document.getElementById(id); });
+  ['setupGate','setupForm','setupPassword','setupPasswordConfirm','setupError','authGate','appRoot','authForm','passwordInput','authError','logoutBtn','workForm','workList','detailView','detailEmpty','totalWorks','totalAssets','topSkill','monthlyWorkCount','exportBtn','mdExportBtn','importInput','searchInput','projectFilter','skillFilter','listSummary','seedBtn','formTitle','formModeHint','cancelEditBtn','submitBtn','skillMap','skillSummary','assetLibrary','assetSummary','monthPicker','monthlySummary','syncEmail','sendMagicLinkBtn','syncDownBtn','syncUpBtn','cloudSignOutBtn','cloudStatus','tabNav','cloudBadge','rawInput','aiRefineBtn','aiStatus','apiKeyInput','saveApiKeyBtn','apiKeyStatus','currentPwInput','newPwInput','confirmPwInput','changePwBtn','pwChangeStatus','supabaseUrlInput','supabaseKeyInput','saveSupabaseBtn','supabaseConfigStatus','addJobBtn','cancelJobBtn','jobForm','jobSubmitBtn','jobFormWrap','jobList','jobDetailEmpty','jobDetailView','jobStatusFilter','jobSearchInput','htmlFileInput','htmlUploadArea','htmlUploadPlaceholder','htmlUploadSelected','htmlFileName','htmlFileClear'].forEach(id => { el[id] = document.getElementById(id); });
   el.form = el.workForm;
 }
 
@@ -51,7 +51,7 @@ function switchTab(name) {
 }
 
 function normalizeWork(w) {
-  return { id: w.id || uid(), title: w.title || '', date: w.date || '', project: w.project || '', category: w.category || '', summary: w.summary || '', role: w.role || '', tools: w.tools || '', link: w.link || '', problem: w.problem || '', action: w.action || '', result: w.result || '', lesson: w.lesson || '', skills: Array.isArray(w.skills) ? w.skills : [], asset: w.asset && w.asset.name ? { name: w.asset.name, type: w.asset.type || '' } : null, aiResume: w.aiResume || '', aiStar: w.aiStar || '', aiPortfolio: w.aiPortfolio || '', createdAt: w.createdAt || new Date().toISOString(), updatedAt: w.updatedAt || null };
+  return { id: w.id || uid(), title: w.title || '', date: w.date || '', project: w.project || '', category: w.category || '', summary: w.summary || '', role: w.role || '', tools: w.tools || '', link: w.link || '', problem: w.problem || '', action: w.action || '', result: w.result || '', lesson: w.lesson || '', skills: Array.isArray(w.skills) ? w.skills : [], asset: w.asset && w.asset.name ? { name: w.asset.name, type: w.asset.type || '' } : null, aiResume: w.aiResume || '', aiStar: w.aiStar || '', aiPortfolio: w.aiPortfolio || '', htmlFile: w.htmlFile || null, createdAt: w.createdAt || new Date().toISOString(), updatedAt: w.updatedAt || null };
 }
 
 const JOB_STATUS = {
@@ -225,24 +225,75 @@ function renderDetail() {
   const starText = work.aiStar || out.star;
   const portfolioText = work.aiPortfolio || out.portfolio;
   const aiBadge = hasAi ? '<span class="tag tag-teal" style="font-size:11px;vertical-align:middle;margin-left:8px">✦ AI 정제</span>' : '';
-  el.detailView.innerHTML = `<div class="detail-grid"><div class="detail-card full"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap"><div><h3 style="font-size:22px;margin-bottom:6px">${escapeHtml(work.title)}${aiBadge}</h3><div class="meta">${escapeHtml(work.date || '')} · ${escapeHtml(work.project || '-')} · ${escapeHtml(work.role || '-')}</div></div><div class="detail-actions"><button type="button" class="btn btn-ghost btn-sm" data-action="edit">수정</button><button type="button" class="btn btn-danger btn-sm" data-action="delete">삭제</button></div></div></div><div class="detail-card"><h3>한 줄 설명</h3><div class="content">${nl2br(work.summary)}</div></div><div class="detail-card"><h3>사용 도구</h3><div class="content">${nl2br(work.tools || '-')}</div></div><div class="detail-card"><h3>문제</h3><div class="content">${nl2br(work.problem)}</div></div><div class="detail-card"><h3>행동</h3><div class="content">${nl2br(work.action)}</div></div><div class="detail-card"><h3>결과</h3><div class="content">${nl2br(work.result)}</div></div><div class="detail-card"><h3>배운 점</h3><div class="content">${nl2br(work.lesson)}</div></div><div class="detail-card"><h3>역량 태그</h3><div class="tag-list">${(work.skills || []).map(s => `<span class="tag tag-accent">${escapeHtml(s)}</span>`).join('') || '<span class="meta">없음</span>'}</div></div><div class="detail-card"><h3>자산</h3><div class="content">${work.asset?.name ? `${escapeHtml(work.asset.name)} <span class="tag tag-teal">${escapeHtml(work.asset.type || '-')}</span>` : '<span class="meta">없음</span>'}</div></div><div class="detail-card full"><h3>이력서 Bullet</h3><pre class="output">${escapeHtml(resumeText)}</pre></div><div class="detail-card"><h3>포트폴리오 문단</h3><pre class="output">${escapeHtml(portfolioText)}</pre></div><div class="detail-card"><h3>면접 STAR</h3><pre class="output">${escapeHtml(starText)}</pre></div></div>`;
+  const htmlSection = work.htmlFile?.content ? `<div class="detail-card full"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3>포트폴리오 미리보기 <span class="meta" style="font-size:13px;font-family:var(--font-mono)">${escapeHtml(work.htmlFile.name)}</span></h3><div style="display:flex;gap:8px"><button class="btn btn-outline btn-sm" data-action="togglePreview">미리보기</button><button class="btn btn-outline btn-sm" data-action="downloadHtml">다운로드</button></div></div><div id="htmlPreviewWrap" class="html-preview-wrap hidden"><iframe id="htmlPreviewFrame" class="html-preview-frame" sandbox="allow-scripts allow-same-origin"></iframe></div></div>` : '';
+  el.detailView.innerHTML = `<div class="detail-grid"><div class="detail-card full"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap"><div><h3 style="font-size:22px;margin-bottom:6px">${escapeHtml(work.title)}${aiBadge}</h3><div class="meta">${escapeHtml(work.date || '')} · ${escapeHtml(work.project || '-')} · ${escapeHtml(work.role || '-')}</div></div><div class="detail-actions"><button type="button" class="btn btn-ghost btn-sm" data-action="edit">수정</button><button type="button" class="btn btn-danger btn-sm" data-action="delete">삭제</button></div></div></div>${htmlSection}<div class="detail-card"><h3>한 줄 설명</h3><div class="content">${nl2br(work.summary)}</div></div><div class="detail-card"><h3>사용 도구</h3><div class="content">${nl2br(work.tools || '-')}</div></div><div class="detail-card"><h3>문제</h3><div class="content">${nl2br(work.problem)}</div></div><div class="detail-card"><h3>행동</h3><div class="content">${nl2br(work.action)}</div></div><div class="detail-card"><h3>결과</h3><div class="content">${nl2br(work.result)}</div></div><div class="detail-card"><h3>배운 점</h3><div class="content">${nl2br(work.lesson)}</div></div><div class="detail-card"><h3>역량 태그</h3><div class="tag-list">${(work.skills || []).map(s => `<span class="tag tag-accent">${escapeHtml(s)}</span>`).join('') || '<span class="meta">없음</span>'}</div></div><div class="detail-card"><h3>자산</h3><div class="content">${work.asset?.name ? `${escapeHtml(work.asset.name)} <span class="tag tag-teal">${escapeHtml(work.asset.type || '-')}</span>` : '<span class="meta">없음</span>'}</div></div><div class="detail-card full"><h3>이력서 Bullet</h3><pre class="output">${escapeHtml(resumeText)}</pre></div><div class="detail-card"><h3>포트폴리오 문단</h3><pre class="output">${escapeHtml(portfolioText)}</pre></div><div class="detail-card"><h3>면접 STAR</h3><pre class="output">${escapeHtml(starText)}</pre></div></div>`;
   el.detailView.querySelector('[data-action="edit"]')?.addEventListener('click', () => startEdit(work.id));
   el.detailView.querySelector('[data-action="delete"]')?.addEventListener('click', () => deleteWork(work.id));
+  el.detailView.querySelector('[data-action="togglePreview"]')?.addEventListener('click', () => {
+    const wrap = document.getElementById('htmlPreviewWrap');
+    const frame = document.getElementById('htmlPreviewFrame');
+    const isHidden = wrap.classList.toggle('hidden');
+    if (!isHidden && frame && !frame.srcdoc) frame.srcdoc = work.htmlFile.content;
+  });
+  el.detailView.querySelector('[data-action="downloadHtml"]')?.addEventListener('click', () => {
+    downloadBlob(new Blob([work.htmlFile.content], { type: 'text/html;charset=utf-8' }), work.htmlFile.name);
+  });
 }
 
 function renderAll() { renderStats(); renderSkillMap(); renderList(); renderAssets(); renderMonthlySummary(); renderDetail(); renderJobList(); renderJobDetail(); }
+
+/* ── HTML 파일 업로드 ── */
+let _pendingHtmlFile = null; // 저장 대기 중인 HTML 파일 { name, content }
+
+function initHtmlUpload() {
+  if (!el.htmlFileInput) return;
+  el.htmlUploadArea.addEventListener('click', () => el.htmlFileInput.click());
+  el.htmlUploadArea.addEventListener('dragover', e => { e.preventDefault(); el.htmlUploadArea.classList.add('drag-over'); });
+  el.htmlUploadArea.addEventListener('dragleave', () => el.htmlUploadArea.classList.remove('drag-over'));
+  el.htmlUploadArea.addEventListener('drop', e => { e.preventDefault(); el.htmlUploadArea.classList.remove('drag-over'); const f = e.dataTransfer.files[0]; if (f) handleHtmlFile(f); });
+  el.htmlFileInput.addEventListener('change', e => { const f = e.target.files[0]; if (f) handleHtmlFile(f); });
+  el.htmlFileClear.addEventListener('click', e => { e.stopPropagation(); clearHtmlFile(); });
+}
+
+function handleHtmlFile(file) {
+  if (!file.name.match(/\.html?$/i)) { alert('.html 파일만 업로드 가능합니다.'); return; }
+  if (file.size > 2 * 1024 * 1024) { alert('파일 크기가 2MB를 초과합니다.'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    _pendingHtmlFile = { name: file.name, content: e.target.result };
+    el.htmlFileName.textContent = file.name;
+    el.htmlUploadPlaceholder.classList.add('hidden');
+    el.htmlUploadSelected.classList.remove('hidden');
+  };
+  reader.readAsText(file);
+}
+
+function clearHtmlFile() {
+  _pendingHtmlFile = null;
+  el.htmlFileInput.value = '';
+  el.htmlUploadPlaceholder.classList.remove('hidden');
+  el.htmlUploadSelected.classList.add('hidden');
+}
 
 function workFromForm(form) {
   const d = new FormData(form), an = (d.get('assetName') || '').trim(), at = (d.get('assetType') || '').trim();
   return { title: (d.get('title') || '').trim(), date: d.get('date') || '', project: (d.get('project') || '').trim(), category: (d.get('category') || '').trim(), summary: (d.get('summary') || '').trim(), role: (d.get('role') || '').trim(), tools: (d.get('tools') || '').trim(), link: (d.get('link') || '').trim(), problem: (d.get('problem') || '').trim(), action: (d.get('action') || '').trim(), result: (d.get('result') || '').trim(), lesson: (d.get('lesson') || '').trim(), skills: parseSkills(d.get('skills') || ''), asset: an ? { name: an, type: at } : null };
 }
 
-function resetFormMode() { state.editingId = null; el.form.reset(); delete el.form.dataset.aiResume; delete el.form.dataset.aiStar; delete el.form.dataset.aiPortfolio; el.formTitle.textContent = '새 업무 기록'; el.formModeHint.textContent = '빠르게 기록하고, 필요하면 나중에 더 구조화하면 돼.'; el.submitBtn.textContent = '저장하기'; el.cancelEditBtn.classList.add('hidden'); }
+function resetFormMode() {
+  state.editingId = null; el.form.reset();
+  delete el.form.dataset.aiResume; delete el.form.dataset.aiStar; delete el.form.dataset.aiPortfolio;
+  clearHtmlFile();
+  el.formTitle.textContent = '새 업무 기록'; el.formModeHint.textContent = '빠르게 기록하고, 필요하면 나중에 더 구조화하면 돼.'; el.submitBtn.textContent = '저장하기'; el.cancelEditBtn.classList.add('hidden');
+}
 
 function startEdit(id) {
   const w = state.works.find(x => x.id === id); if (!w) return;
   state.editingId = id; const f = el.form;
   f.title.value = w.title; f.date.value = w.date; f.project.value = w.project; f.category.value = w.category; f.summary.value = w.summary; f.role.value = w.role; f.tools.value = w.tools; f.link.value = w.link; f.problem.value = w.problem; f.action.value = w.action; f.result.value = w.result; f.lesson.value = w.lesson; f.skills.value = (w.skills || []).join(', '); f.assetName.value = w.asset?.name || ''; f.assetType.value = w.asset?.type || '';
+  // 기존 HTML 파일이 있으면 표시
+  if (w.htmlFile?.name) { _pendingHtmlFile = w.htmlFile; el.htmlFileName.textContent = w.htmlFile.name; el.htmlUploadPlaceholder.classList.add('hidden'); el.htmlUploadSelected.classList.remove('hidden'); }
+  else { clearHtmlFile(); }
   el.formTitle.textContent = '업무 수정'; el.formModeHint.textContent = '선택한 업무를 수정 중.'; el.submitBtn.textContent = '수정 저장'; el.cancelEditBtn.classList.remove('hidden');
   switchTab('record'); window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -255,6 +306,7 @@ async function upsertWorkFromForm(form) {
   if (form.dataset.aiResume) payload.aiResume = form.dataset.aiResume;
   if (form.dataset.aiStar) payload.aiStar = form.dataset.aiStar;
   if (form.dataset.aiPortfolio) payload.aiPortfolio = form.dataset.aiPortfolio;
+  if (_pendingHtmlFile) payload.htmlFile = _pendingHtmlFile;
   if (state.editingId) { state.works = state.works.map(w => w.id === state.editingId ? { ...w, ...payload, updatedAt: new Date().toISOString() } : w); state.selectedId = state.editingId; }
   else { const w = { id: uid(), ...payload, createdAt: new Date().toISOString(), updatedAt: null }; state.works.unshift(w); state.selectedId = w.id; }
   await persistWorks(); populateFilters(); renderAll(); resetFormMode();
@@ -714,7 +766,7 @@ function init() {
   if (!hasPasswordSet()) showSetup();
   else if (isAuthenticated()) showApp();
   else showGate();
-  bindEvents(); initSupabase(); initApiKeyUi(); initSupabaseConfigUi();
+  bindEvents(); initSupabase(); initApiKeyUi(); initSupabaseConfigUi(); initHtmlUpload();
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();

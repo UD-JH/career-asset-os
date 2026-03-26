@@ -147,6 +147,20 @@
             <select name="assetType"><option value="">선택</option><option value="template">template</option><option value="checklist">checklist</option><option value="document">document</option><option value="script">script</option><option value="framework">framework</option><option value="prompt">prompt</option></select>
           </div>
         </div>
+        <div class="form-divider"><span>포트폴리오 파일</span></div>
+        <div class="form-group">
+          <label>HTML 파일 첨부 <span class="label-hint">(분석 결과물, 대시보드 등 · 최대 2MB)</span></label>
+          <div class="html-upload-area" id="htmlUploadArea">
+            <input type="file" id="htmlFileInput" accept=".html,.htm" />
+            <div class="html-upload-placeholder" id="htmlUploadPlaceholder">
+              <span>HTML 파일을 끌어다 놓거나 클릭해서 선택</span>
+            </div>
+            <div class="html-upload-selected hidden" id="htmlUploadSelected">
+              <span id="htmlFileName"></span>
+              <button type="button" id="htmlFileClear" class="btn btn-ghost btn-sm">제거</button>
+            </div>
+          </div>
+        </div>
         <div class="form-footer"><button type="submit" class="btn btn-primary" id="submitBtn">저장하기</button></div>
       </form>
     </main>
