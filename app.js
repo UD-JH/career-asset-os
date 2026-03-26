@@ -19,6 +19,32 @@ function nl2br(t) { return escapeHtml(t || '').replace(/\n/g, '<br>'); }
 function parseSkills(v) { return String(v || '').split(',').map(s => s.trim()).filter(Boolean); }
 function debounce(fn, ms = 200) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 
+async function confirmPassword(promptMsg = '설정에 접근하려면 비밀번호를 입력하세요.') {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'confirm-overlay';
+    overlay.innerHTML = `
+      <div class="confirm-card">
+        <div class="auth-eyebrow">보안 확인</div>
+        <p style="margin-bottom:16px;font-size:14px;color:var(--ink-muted)">${promptMsg}</p>
+        <form class="auth-form" id="confirmForm">
+          <input type="password" id="confirmPwField" placeholder="비밀번호" autocomplete="current-password" required />
+          <button type="submit" class="btn btn-primary">확인</button>
+          <button type="button" class="btn btn-ghost" id="confirmCancel">취소</button>
+        </form>
+        <div class="auth-error" id="confirmError" hidden>비밀번호가 올바르지 않습니다.</div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#confirmCancel').addEventListener('click', () => { overlay.remove(); resolve(false); });
+    overlay.querySelector('#confirmForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const hash = await hashPassword(overlay.querySelector('#confirmPwField').value || '');
+      if (hash === getConfig().passwordHash) { overlay.remove(); resolve(true); }
+      else { overlay.querySelector('#confirmError').removeAttribute('hidden'); }
+    });
+  });
+}
+
 function switchTab(name) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
   document.querySelectorAll('.tab-content').forEach(p => p.classList.toggle('active', p.dataset.tab === name));
@@ -47,7 +73,7 @@ async function hashPassword(password) {
 }
 
 /* ── Auth ── */
-function isAuthenticated() { return localStorage.getItem(AUTH_KEY) === '1'; }
+function isAuthenticated() { return sessionStorage.getItem(AUTH_KEY) === '1'; }
 
 function showApp() {
   el.setupGate?.setAttribute('hidden', '');
@@ -71,7 +97,7 @@ function showSetup() {
 async function handleAuthSubmit(e) {
   e.preventDefault();
   const hash = await hashPassword(el.passwordInput?.value || '');
-  if (hash === getConfig().passwordHash) { localStorage.setItem(AUTH_KEY, '1'); showApp(); return; }
+  if (hash === getConfig().passwordHash) { sessionStorage.setItem(AUTH_KEY, '1'); showApp(); return; }
   if (el.authError) el.authError.removeAttribute('hidden');
 }
 
@@ -100,7 +126,7 @@ async function changePassword() {
   status('비밀번호가 변경되었습니다.', 'ok');
 }
 
-function logout() { localStorage.removeItem(AUTH_KEY); showGate(); }
+function logout() { sessionStorage.removeItem(AUTH_KEY); showGate(); }
 
 function setDefaultMonthPicker() { const d = state.works.map(w => w.date).filter(Boolean).sort().reverse(); if (el.monthPicker) el.monthPicker.value = (d[0] || new Date().toISOString().slice(0, 10)).slice(0, 7); }
 
@@ -440,7 +466,15 @@ JSON 형식만 반환하고 다른 텍스트는 절대 포함하지 마세요.
 }
 
 function bindEvents() {
-  el.tabNav.addEventListener('click', (e) => { const b = e.target.closest('.tab-btn'); if (b) switchTab(b.dataset.tab); });
+  el.tabNav.addEventListener('click', async (e) => {
+    const b = e.target.closest('.tab-btn');
+    if (!b) return;
+    if (b.dataset.tab === 'settings') {
+      const ok = await confirmPassword('설정에 접근하려면 비밀번호를 입력하세요.');
+      if (!ok) return;
+    }
+    switchTab(b.dataset.tab);
+  });
   el.form.addEventListener('submit', async (e) => { e.preventDefault(); await upsertWorkFromForm(el.form); });
   el.exportBtn.addEventListener('click', exportJson);
   el.mdExportBtn.addEventListener('click', exportMarkdown);
