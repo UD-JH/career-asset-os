@@ -287,7 +287,7 @@ textarea { min-height: 100px; resize: vertical; line-height: 1.6; }
   border: 1px solid var(--teal);
   border-radius: var(--radius);
   padding: 22px 24px;
-  margin-bottom: 8px;
+  margin: 0 auto 8px;
   display: grid;
   gap: 14px;
 }
@@ -337,11 +337,11 @@ textarea { min-height: 100px; resize: vertical; line-height: 1.6; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ── Record Form ── */
-.record-form { max-width: 720px; display: grid; gap: 18px; }
+.record-form { max-width: 720px; display: grid; gap: 18px; margin: 0 auto; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .form-group { display: flex; flex-direction: column; gap: 6px; }
 .form-group label { font-size: 13px; font-weight: 500; color: var(--ink-soft); }
-.form-divider { display: flex; align-items: center; gap: 16px; margin: 8px 0; color: var(--ink-faint); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
+.form-divider { display: flex; align-items: center; gap: 16px; max-width: 720px; margin: 8px auto; color: var(--ink-faint); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
 .form-divider::before, .form-divider::after { content: ''; flex: 1; height: 1px; background: var(--line-light); }
 .form-footer { display: flex; justify-content: flex-end; padding-top: 8px; }
 
@@ -398,7 +398,7 @@ pre.output {
 }
 
 /* ── Settings ── */
-.settings-grid { display: grid; gap: 20px; max-width: 640px; }
+.settings-grid { display: grid; gap: 20px; max-width: 640px; margin: 0 auto; }
 .settings-actions { display: grid; gap: 10px; }
 .file-label-btn { cursor: pointer; }
 .file-label-btn input { display: none; }
